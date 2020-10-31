@@ -1,0 +1,83 @@
+"""
+See "../gallery/file_dialog_app.png"
+"""
+from os.path import exists
+
+from pyml.qtquick import *
+from pyml.qtquick.window import Window
+
+
+comp MyWindow(Window): @win
+    _row_style = RowStyle()
+    file_ext = '.html'
+    file_dir: str
+
+    style:
+        background_color: '#cccccc'
+        size: (600, 400)
+    
+    Column: @column
+        style:
+            size: parent.inner_size
+            spacing: 10
+            vmargin: 10
+        Row: @row1
+            style: _row_style
+            Label:
+                text: 'Input {}:'.format(file_ext.lstrip('.'))
+            Field:
+                text == win.file_dir
+                style: FieldStyle
+                    height: inner_fill
+            Button: @browse_btn
+                text: 'Browse'
+                on_clicked:
+                    if _dir := FileDialog(isfile=False, ext=file_ext):
+                        win.file_dir = _dir
+            Button: run_btn
+                text: 'Run'
+                on_clicked:
+                    if not exists(win.file_dir):
+                        return
+                    
+                    def process_files():
+                        from lk_utils.filesniff import findall_files
+                        from os import startfile
+                        
+                        files = findall_files(win.file_dir, 'dict')
+                        prog = (
+                            round(i / len(files), 2) 
+                            for i in range(1, len(files) + 1)
+                        )
+                        
+                        for fp, fn in findall_files(win.file_dir, 'zip'):
+                            startfile(win.file_dir)
+                            yield next(prog)
+                    
+                    for v in process_files():
+                        self.progress.value = v
+        Row: @row2
+            style: _row_style
+            Progress: @progress
+                pass
+
+
+comp RowStyle(Style):
+    width: 'fill'
+    height: 'wrap'
+    spacing: 5
+    vpadding: 2
+
+
+comp FieldStyle(Style):
+    width: 'wrap'
+    height: 0
+
+
+if __name__ == '__main__':
+    from pyml.core import Application
+    
+    app = Application()
+    win = MyWindow()
+    win.show()
+    app.start()
