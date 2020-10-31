@@ -6,6 +6,10 @@ PYML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处.
 
 PYML 写出来的代码看起来长这样:
 
+**示例: 矩形缩放动画**
+
+![](gallery/pyml_intro.gif)
+
 ```pyml
 import pyml.qtquick
 import pyml.qtquick.controls
@@ -17,7 +21,6 @@ comp MyWindow(Window): @win
     color: '#cccccc'
     width: 600
     height: 800
-    padding: 10
 
     Item: @container
         attr active: False
@@ -26,7 +29,7 @@ comp MyWindow(Window): @win
 
         Rectangle:
             width: 100
-            height: 100
+            height: 200
             color: '#ffffff'
             radius: 8
             anim:
@@ -42,7 +45,10 @@ comp MyWindow(Window): @win
             MouseArea:
                 size: 'fill'
                 on_clicked:
-                    container.active = !container.active
+                    state = container.active = !container.active
+                    print('{} animating'.format(
+                        'Release' if state is True else 'Withdraw'
+                    ))
 
 
 if __name__ == '__main__':
@@ -53,5 +59,3 @@ if __name__ == '__main__':
         app.start()
 
 ```
-
-![](./gallery/pyml-intro.gif)

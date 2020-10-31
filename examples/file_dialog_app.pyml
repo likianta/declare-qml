@@ -3,8 +3,8 @@ See "../gallery/file_dialog_app.png"
 """
 from os.path import exists
 
-from pyml.qtquick import *
-from pyml.qtquick.window import Window
+import pyml.qtquick
+import pyml.qtquick.window
 
 
 comp MyWindow(Window): @win
@@ -13,7 +13,7 @@ comp MyWindow(Window): @win
     file_dir: str
 
     style:
-        background_color: '#cccccc'
+        color: '#cccccc'
         size: (600, 400)
     
     Column: @column
@@ -21,9 +21,10 @@ comp MyWindow(Window): @win
             size: parent.inner_size
             spacing: 10
             vmargin: 10
+
         Row: @row1
             style: _row_style
-            Label:
+            Text:
                 text: 'Input {}:'.format(file_ext.lstrip('.'))
             Field:
                 text == win.file_dir
@@ -55,7 +56,8 @@ comp MyWindow(Window): @win
                             yield next(prog)
                     
                     for v in process_files():
-                        self.progress.value = v
+                        progress.value = v
+
         Row: @row2
             style: _row_style
             Progress: @progress
