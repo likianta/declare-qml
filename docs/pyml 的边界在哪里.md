@@ -5,15 +5,15 @@
 ```pyml
 import pyml.qtquick.window
 
-comp 123Window(Window): @win  # 错误 1. QML 不允许数字开头的组件命名
-    on_width: height ++  # 错误 2. Python 不支持 `num++` 语法
+comp 123Window(Window): @win  # 1. QML 不允许数字开头的组件命名
+    on_width: height ++  # 2. Python 不支持 `num++` 语法
 ```
 
 2. pyml 对这种情况报错:
 
 ```pyml
-comp Window  # 错误 1. 'Window' 后面缺少冒号
-    @win  # 错误 2. '@' 语法必须在与 'comp' 同一行使用
+comp Window  # 1. 'Window' 后面缺少冒号
+    @win  # 2. '@' 语法必须在与 'comp' 同一行使用
 ```
 
 这是因为, pyml 只对自己的语法规则做严格要求, 以保证能够依据 pyml 语法顺利生成 .qml 和 .py 文件. 至于生成的代码能否运行, 那是 QML 和 Python 的事情.

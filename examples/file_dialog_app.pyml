@@ -29,13 +29,13 @@ comp MyWindow(Window): @win
             Field:
                 text == win.file_dir
                 style: FieldStyle
-                    height: inner_fill
+                    height: 'ifill'
             Button: @browse_btn
                 text: 'Browse'
                 on_clicked:
                     if _dir := FileDialog(isfile=False, ext=file_ext):
                         win.file_dir = _dir
-            Button: run_btn
+            Button: @run_btn
                 text: 'Run'
                 on_clicked:
                     if not exists(win.file_dir):
@@ -78,8 +78,7 @@ comp FieldStyle(Style):
 
 if __name__ == '__main__':
     from pyml.core import Application
-    
-    app = Application()
-    win = MyWindow()
-    win.show()
-    app.start()
+    with Application() as app:
+        win = MyWindow()
+        win.show()
+        app.start()
