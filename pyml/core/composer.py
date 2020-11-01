@@ -1,4 +1,3 @@
-import os
 import re
 
 
@@ -7,7 +6,7 @@ class Composer:
     
     def __init__(self, pyml_text: str):
         self.pyml_text = pyml_text
-
+    
     def _mask(self):
         """
         IO:
@@ -31,13 +30,22 @@ class Composer:
         :return:
         """
         text = self.pyml_text
-        text = text.replace('{', '{{').replace('}', '}}')
         
         mask = Mask(text)
-        
-        # 字符串匹配
+        # 1. 将末尾以 \\ 换行的内容拼接回来.
+        #    例如 'a = "xy" \\\n    "z"' -> 'a = "xy" {mask}    "z"'.
+        #    经过这样处理后, 我们可以保证代码的所有缩进 (除下面要处理的掩码外)
+        #    都是严格表达层级关系的.
+        mask.main(re.compile(r'\\ *\n'))
+        # 2. 字符串掩码
+        #    示意图: '.assets/snipaste 2020-11-01 171109.png'
         mask.main(re.compile(r'([\'"]).*?(?<!\\)\1'))
-        #
+        # 3. 行注释与块注释
+        mask.main(re.compile(r'#.*$'))
+        #   mask.main(re.compile(r'#(?:.|\s)*$'))
+        mask.main(re.compile(r'("""|\'\'\')(?:.|\s)*?\1'))
+        # 4. 大中小括号
+
 
 class Mask:
     
@@ -62,7 +70,7 @@ class Mask:
             -> self._text = '{mask1} she says, {mask2}'
             
             So we can use `self._text.format(**self._mask)` to restore the
-            origin text in the future.
+            origin text in the future (see `self.plain_text()`).
         
         :param pattern:
         :return:
@@ -87,14 +95,21 @@ class Mask:
     
     @property
     def plain_text(self):
-        return self._text.format(**self._mask)
-
-
-if __name__ == '__main__':
-    mask = Mask(
-        """'He didn\\'t tell you,' she says, "and me, too.\""""
-    )
-    mask.main(re.compile(r'([\'"]).*?(?<!\\)\1'))
-    print(mask.masked_text)
-    print(mask.plain_text)
-    # See the result at '.assets/snipaste 2020-11-01 171109.png'
+        """
+        E.g.
+            # origin_text = 'a = "x and y" \\ \n    "and z"'
+            self._text = 'a = {mask2}'
+            self._mask = {
+                'mask1': '\\ \n',
+                'mask2': '"x and y" {mask1}    "and z"',
+            }
+            ->
+                result = 'a = "x and y" \\ \n    "and z"'
+                # assert result == origin_text
+        
+        """
+        pattern = re.compile(r'{mask\d+}')
+        text = self._text
+        while pattern.search(text):
+            text = text.format(**self._mask)
+        return text
