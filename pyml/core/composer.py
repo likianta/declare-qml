@@ -2,12 +2,14 @@
 @Author  : Likianta <likianta@foxmail.com>
 @Module  : composer.py
 @Created : 2020-11-01
-@Updated : 2020-11-01
-@Version : 0.1.1
+@Updated : 2020-11-02
+@Version : 0.1.5
 @Desc    :
 """
 import re
 from contextlib import contextmanager
+
+from lk_logger import lk
 
 
 class Composer:
@@ -30,8 +32,8 @@ class Composer:
         mask.main(re.compile(r'\\ *\n'))
         # 2. 字符串掩码
         #    示意图: '.assets/snipaste 2020-11-01 171109.png'
-        with mask.temp_mask(re.compile(r'(?<!\\)"""'), '◆BLOCK_CMT◆', '"""'), \
-             mask.temp_mask(re.compile(r"(?<!\\)'''"), "◇BLOCK_CMT◇", "'''"):
+        with mask.temp_mask(re.compile(r'(?<!\\)"""'), '"""'), \
+             mask.temp_mask(re.compile(r"(?<!\\)'''"), "'''"):
             mask.main(re.compile(r'([\'"]).*?(?<!\\)\1'))
         # 3. 块注释
         mask.main(re.compile(r'("""|\'\'\')(?:.|\n)*?(?<!\\)\1'))
@@ -42,36 +44,53 @@ class Composer:
         mask.main(re.compile(r'\[(?:.|\n)*?]'))
         mask.main(re.compile(r'{{(?:.|\n)*?}}'))
         
-        # ----------------------------------------------------------------------
-        # TEST
-        from lk_utils import read_and_write
-        from lk_utils.lk_logger import lk
-        
-        read_and_write.write_file(mask.plain_text, '../../tests/test2.txt')
-        read_and_write.write_file(mask.masked_text, '../../tests/test.pyml')
-        # noinspection PyProtectedMember
-        read_and_write.write_json(mask._mask, '../../tests/test.json')
-        lk.loga(mask.plain_text)
-        lk.loga('\t-> ' + mask.masked_text)
+        return mask
 
 
 class Mask:
     
     def __init__(self, text: str):
         self._index = 0
-        self._text = text.replace('{', '{{').replace('}', '}}')
+        self._holder_pattern = re.compile(r'{mask_holder_\d+}')
+        self._conflicts = self._holder_pattern.findall(text)
+        self._text = self._holder_pattern.sub('{mask_holder_conflict}', text)
         self._mask = {}  # {str mask_holder: str raw_text}
-    
-    def replace(self, fo, to, cnt=-1):  # DELETE ME
-        self._text = self._text.replace(fo, to, cnt)
+        
+        if self._conflicts:
+            lk.loga('find conflicts', len(self._conflicts))
     
     @contextmanager
-    def temp_mask(self, fo: re.Pattern, to: str, restore=''):
+    def temp_mask(self, pattern: re.Pattern, restore=''):
+        """
+        NOTE: 您需要保证 pattern 的形式足够简单, 它应该只匹配到 "一个" 特定的字
+            符串, 例如:
+                # wrong
+                pattern = re.compile(r'\d\d')
+                pattern = re.compile(r'\w+')
+                ...
+                
+                # right (仅使用准确的描述, 可以加上前瞻, 后顾的条件)
+                pattern = re.compile(r'11')
+                pattern = re.compile(r'(?<=0x)001A')
+                pattern = re.compile(r'32(?!\w)')
+                ...
+            restore 一般来说和 pattern 要匹配的目标字符串是一致的. 比如
+            `pattern = re.compile(r'11')` 对应的 restore 就是 '11',
+            `pattern = re.compile(r'(?<=0x)001A')` 对应的 restore 是 '001A'.
+        
+        :param pattern:
+        :param restore:
+        :return:
+        """
+        restore = restore or pattern.pattern
         try:
-            self._text = fo.sub(to, self._text)
+            holder = self._create_mask_holder(restore)
+            self._text = pattern.sub(holder, self._text)
             yield self
         finally:
-            self._text = self._text.replace(to, restore or fo.pattern)
+            # noinspection PyUnboundLocalVariable
+            restore_pattern = re.compile(r'(?<!{)' + holder + r'(?!})')
+            self._text = restore_pattern.sub(restore, self._text)
     
     def main(self, pattern: re.Pattern):
         """
@@ -97,15 +116,15 @@ class Mask:
         text = self._text
         for match in pattern.finditer(text):
             match_str = match.group(0)
-            key = self._create_mask_holder(match_str)
-            self._text = self._text.replace(match_str, f'{{{key}}}', 1)
-            # # noinspection PyTypeChecker
-            # self._safely_replace(*match.span(0), key)
+            holder = self._create_mask_holder(match_str)
+            self._text = self._text.replace(match_str, holder, 1)
+            #   # noinspection PyTypeChecker
+            #   self._safely_replace(*match.span(0), holder)
     
     def _safely_replace(self, start: int, end: int, mask_holder: str):
         """ 安全地替换目标片段为 mask_holder.
         
-        NOTE: This method has no usage for now.
+        FIXME: 此方法未被调用过, 且未通过用例测试 (需要检视和修复).
         
         E.g.
             from: 'a = "x, y"'
@@ -136,9 +155,9 @@ class Mask:
     
     def _create_mask_holder(self, s: str):
         self._index += 1
-        key, val = f'mask_node_{self._index}', s
+        key, val = f'mask_holder_{self._index}', s
         self._mask[key] = val
-        return key
+        return '{' + key + '}'
     
     @property
     def masked_text(self):
@@ -158,22 +177,42 @@ class Mask:
                 result = 'a = "x and y" \\ \n    "and z"'
                 # assert result == origin_text
         """
-        pattern = re.compile(r'(?:{{)*{mask_node_\d+}(?:}})*')
-        #   注意: 这里的 'mask_node_\d+' 与 `self._create_mask_holder()` 中的键
-        #   格式有关.
+        pattern = self._holder_pattern
         text = self._text
+        _error_stack = []
+        
         while pattern.search(text):
+            _error_stack.append('---------------- ERROR STACK ----------------')
+            _error_stack.append(text)
+            
             try:
-                text = text.format(**self._mask)
+                for holder in set(pattern.findall(text)):
+                    text = text.replace(
+                        holder, self._mask[holder[1:-1]]
+                        #                 ^ '{mask_holder_1}' -> 'mask_holder_1'
+                    )
             except Exception as e:
-                read_and_write.write_file(
-                    text, './pyml_composer_error.txt'
+                from lk_utils import read_and_write
+                read_and_write.dumps(
+                    _error_stack, f1 := './pyml_composer_error.txt'
                 )
-                read_and_write.write_file(
-                    self._mask, './pyml_composer_error.json'
+                read_and_write.dumps(
+                    self._mask, f2 := './pyml_composer_error.json'
                 )
-                raise e
-        return text.replace('{{', '{').replace('}}', '}')
+                raise Exception(
+                    e, f'Plese check dumped info from [{f1}] and [{f2}] for '
+                       f'more infomation.'
+                )
+            
+        else:
+            if text == self._text:
+                lk.loga('No mask node found')
+        
+        for holder in self._conflicts:
+            text = text.replace('{mask_holder_conflict}', holder, 1)
+        
+        del _error_stack
+        return text
 
 
 if __name__ == '__main__':
