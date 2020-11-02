@@ -16,21 +16,23 @@ class RegexHint:
 
 
 class AstHint:
-    AstTreeNode = Dict[str, Any]
+    LineNo = str
+    """ -> 'line{num}' -> num: 0, 1, 2, ... """
+    AstNode = Dict[str, Any]
     """ -> {
+            'lineno': str,
+            'line': str,
             'level': <int 0, 4, 8, ...>,
-            'type': <str 'import', 'from', 'def', 'class', 'comp', ...>,
+            'parent': str lineno,
             'children': {
-                'line{num}': {
-                    'level': ...,
-                    ...
-                },
+                lineno: AstTreeNode,
                 ...
             },
+            ...
         }
     """
-    AstTree = Dict[str, AstTreeNode]
-    """ -> {str 'line{num}': dict ast_tree_node, ...} """
+    AstTree = Dict[str, AstNode]
+    """ -> {str lineno: dict ast_tree_node, ...} """
 
 
 class ComposerHint(RegexHint, AstHint):
@@ -63,3 +65,4 @@ class CompAstHint(AstHint):
             }
         }
     """
+    IDs = Dict[str, Component]

@@ -1,7 +1,7 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : mask.py
-@Version  : 0.1.0
+@Version  : 0.2.0
 @Created  : 2020-11-02
 @Updated  : 2020-11-02
 @Desc     : 
@@ -62,7 +62,7 @@ class Mask:
             restore_pattern = re.compile(r'(?<!{)' + holder + r'(?!})')
             self._text = restore_pattern.sub(restore, self._text)
     
-    def main(self, pattern: Hint.RegexPattern):
+    def main(self, pattern: Hint.RegexPattern, cmd=''):
         """
         E.g.
             self._text = '\'He didn\\\'t tell you,\' she says, "and me, too."'
@@ -81,12 +81,24 @@ class Mask:
             origin text in the future (see `self.plain_text()`).
 
         :param pattern:
+        :param cmd: <str 'strip_linebreaks', 'abandon'>
+            strip_linebreaks: replace '\n' to ' '
+            abandon: repalce matched string to ' '
+            
         :return:
         """
         text = self._text
         for match in pattern.finditer(text):
             match_str = match.group(0)
-            holder = self._create_mask_holder(match_str)
+            if cmd == '':
+                mask_to = match_str
+            elif cmd == 'abandon':
+                mask_to = ''
+            elif cmd == 'strip_linebreaks':
+                mask_to = match_str.replace('\n', ' ')
+            else:
+                raise Exception('Unknown command', cmd, match_str)
+            holder = self._create_mask_holder(mask_to)
             self._text = self._text.replace(match_str, holder, 1)
             """ FIXME: 隐患
                 假如有:
@@ -140,11 +152,13 @@ class Mask:
         key, val = f'mask_holder_{self._keyx}', s
         self._mask[key] = val
         return '{' + key + '}'
-    
-    def get_masked_text(self):
+
+    @property
+    def masked_text(self):
         return self._text
     
-    def get_plain_text(self, merge_block=False):
+    @property
+    def plain_text(self):
         """
         E.g.
             # origin_text = 'a = "x and y" \\ \n    "and z"'
@@ -167,15 +181,10 @@ class Mask:
             
             try:
                 for holder in set(pattern.findall(text)):
-                    if merge_block:
-                        text = text.replace(
-                            holder, self._mask[holder[1:-1]].replace('\n', ' ')
-                            #   `holder[1:-1]` means `holder.strip("{}")`
-                        )
-                    else:
-                        text = text.replace(
-                            holder, self._mask[holder[1:-1]]
-                        )
+                    text = text.replace(
+                        holder, self._mask[holder[1:-1]]
+                        #   `holder[1:-1]` means `holder.strip("{}")`
+                    )
             except Exception as e:
                 from lk_utils import read_and_write
                 read_and_write.dumps(

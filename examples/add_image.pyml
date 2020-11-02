@@ -2,8 +2,8 @@ from pyml.qmlib import QtQuick
 
 
 comp Rectangle: @photo
-    thumbnail: False
-    image_source: str
+    attr thumbnail: False
+    attr image_source: str
 
     def on_clicked():
         pass
