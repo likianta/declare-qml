@@ -24,11 +24,26 @@ class Composer:
         ast = AST(mask.plain_text)
         comp_blocks = ast.get_compdef_blocks()
         for block in comp_blocks:
-            pass
+            ComponentBlockComposer(block)  # TODO
     
     def _collapse_code_block(self):
         """ 折叠 "代码块". 将块注释, 行注释, 字符串, 括号等替换为掩码, 以便于后
             续的代码分析.
+            
+        本方法的目的是, 将原 pyml 代码中的所有可消除的换行符消除. 例如:
+            indent | code
+                 0 | def calc(
+                 4 |     x, y
+                 0 | ):
+                 4 |     a = (
+                 8 |         x + y
+                 4 |     ) * 2
+        变为:
+            indent | code
+                 0 | def calc(x, y):
+                 4 |     a = (x + y) * 2
+        这样, 得到的处理后的代码是严格按照缩进来表示嵌套层次的代码, 有利于后面用
+        `pyml.core.composer.ast.AST` 构建语法树.
 
         :ref: 'docs/Composer 掩码处理效果示例.md'
         :return:
@@ -60,7 +75,7 @@ class Composer:
         return mask
 
 
-class ComponentComposer:
+class ComponentBlockComposer:
     
     def __init__(self, comp_block: CompAstHint.AstNode):
         self._comp_block = comp_block
@@ -69,21 +84,9 @@ class ComponentComposer:
         }  # type: CompAstHint.IDs
         
     def main(self):
-        self._extend_props()
+        # self._extend_props()
         self.global_scanning()
         self.line_scanning()
-
-    def _extend_props(self):
-    
-        def _recurse(nodes: CompAstHint.AstNodeList):
-            for node in nodes:
-                node.update({
-                    'attr' : {},
-                    'style': {},
-                })
-                _recurse(node['children'].values())
-    
-        _recurse((self._comp_block,))
 
     def global_scanning(self):
         """ Find and store ids. """
@@ -155,4 +158,3 @@ class ComponentComposer:
                     py_codes.append(
                     
                     )
-                    

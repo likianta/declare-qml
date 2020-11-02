@@ -8,7 +8,7 @@
     表述:
         - no, lineno: 行号. 格式为 'line{num}'.
         - ln, line: 行内容.
-        - node: 节点, 组件节点. 见 Hint.AstTreeNode
+        - node: 节点, 组件节点. 见 Hint.AstNode
         - block: 组件声明域, 组件块. 同 node.
         - compdef: 组件声明域, 组件块. 同 node.
 """
@@ -85,7 +85,7 @@ class AST:
             #   assert len(whitespaces) % 4 == 0
 
         for curr_no, curr_ln in enumerate(code_lines):
-            #   ln_no: line number; curr_ln: current line
+            #   curr_no: current line number; curr_ln: current line
             if curr_ln.strip() == '':
                 continue
             
@@ -124,7 +124,7 @@ class AST:
     def _build_flat_tree(tree):
         out = {}
         
-        def _recurse(node: Hint.AstNode):
+        def _recurse(node: Hint.AstTree):
             for k, v in node.items():
                 out[k] = v
                 _recurse(v['children'])
@@ -133,10 +133,14 @@ class AST:
         return out
 
     def get_compdef_blocks(self):
-        
-        def _recurse(holder):
-            pass
-        
+        """
+        注意: 当前版本不支持嵌套组件声明. 也就是说:
+            comp A:
+                comp B:  # <- 不支持!
+                    pass
+                
+        :return:
+        """
         out = []
         for no, node in self._tree.items():
             assert node['level'] == 0

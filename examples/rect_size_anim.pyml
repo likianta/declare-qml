@@ -1,20 +1,20 @@
-from pyml.qmlib import QtQuick
-from pyml.qmlib import QtQuick.Window
+import pyml.qtquick
+import pyml.qtquick.window
 
 
 comp MyWindow(Window): @win
-    <attr>
+    attr:
         path: str
-    <style>:
+    style:
         w: 600
         h: 800
         padding: 20
         bg_color: '#f2f2f2'
-    <layout>:
+    children:
         orientation: 'vertical'
         alignment: 'hcenter, top'
     Container:
-        <style>:
+        style:
             size: 'ifill'
         Rectangle: @rect
             active: False
@@ -34,9 +34,9 @@ comp MyWindow(Window): @win
                         motion: Easing.OutQuart
         Button: @btn
             text: 'Animate Rectangle'
-            on_clicked():
+            on_clicked:
                 rect.active = !rect.active
-            <style>:
+            style:
                 alignment: 'hcenter, bottom'
 
 
