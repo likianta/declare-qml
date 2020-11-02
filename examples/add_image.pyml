@@ -1,4 +1,4 @@
-from pyml.qmlib import QtQuick
+from pyml.qtquick import Rectangle
 
 
 comp Rectangle: @photo
@@ -44,9 +44,6 @@ comp Rectangle: @photo
             source: root.image_source
             <style>:
                 pos: 'center'
-
-    Timer:
-        pass
 
 
 if __name__ == '__main__':

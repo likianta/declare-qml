@@ -1,5 +1,5 @@
-from pyml.qtquick import QtQuick
-from pyml.qtquick.window import Window
+import pyml.qtquick
+import pyml.qtquick.window
 
 
 comp MyWindow(Window): @win

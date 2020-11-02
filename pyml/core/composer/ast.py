@@ -106,7 +106,8 @@ class AST:
                     'lineno'  : f'line{curr_no}',
                     'line'    : curr_ln.lstrip(),
                     'level'   : curr_lv,
-                    'parent'  : node_chain[-1]['lineno'],
+                    'parent'  : node_chain[-1],
+                    #   'parent'  : node_chain[-1]['lineno'],
                     'children': {},
                 }
             )
@@ -132,6 +133,10 @@ class AST:
         return out
 
     def get_compdef_blocks(self):
+        
+        def _recurse(holder):
+            pass
+        
         out = []
         for no, node in self._tree.items():
             assert node['level'] == 0
@@ -140,7 +145,7 @@ class AST:
         return out
     
 
-class CompAst(AST):
+class CompAst(AST):  # DELETE ME
     """
     
     """
@@ -167,7 +172,7 @@ class CompAst(AST):
                 new_tree[no] = node
         self._tree = new_tree
 
-    def _add_field_info(self):  # DELETE ME
+    def _add_field_info(self):
     
         def _get_keyword(line):
             # Take the first word as 'key'.

@@ -31,6 +31,7 @@ class AstHint:
             ...
         }
     """
+    AstNodeList = List[AstNode]
     AstTree = Dict[str, AstNode]
     """ -> {str lineno: dict ast_tree_node, ...} """
 
@@ -66,3 +67,5 @@ class CompAstHint(AstHint):
         }
     """
     IDs = Dict[str, Component]
+    Props = Dict[str, List[Any]]
+    """ -> {str prop: [comp1, comp2, comp3, ...], ...} """
