@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : mask.py
-@Version  : 0.2.0
+@Version  : 0.2.1
 @Created  : 2020-11-02
-@Updated  : 2020-11-02
+@Updated  : 2020-11-03
 @Desc     : 
 """
 import re
@@ -19,15 +19,17 @@ class Mask:
     def __init__(self, pyml_text: str):
         self._keyx = 0  # keyx: mask holder key index
         self._mask = {}  # type: Hint.MaskHolder
-        self._holder_pattern = re.compile(r'{mask_holder_\d+}')
-        self._text = self._holder_pattern.sub(
-            '{mask_holder_conflict}', pyml_text
-        )
+        
         self._conflicts = re.compile(
             r'{mask_holder_\d+}|{mask_holder_conflict}'
         ).findall(pyml_text)
         if self._conflicts:
             lk.loga('Found {} conflicts'.format(len(self._conflicts)))
+            
+        self._holder_pattern = re.compile(r'{mask_holder_\d+}')
+        self._text = self._holder_pattern.sub(
+            '{mask_holder_conflict}', pyml_text
+        )
     
     @contextmanager
     def temp_mask(self, pattern: Hint.RegexPattern, restore=''):

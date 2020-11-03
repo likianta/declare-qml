@@ -2,8 +2,8 @@
 @Author  : Likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-02
-@Version : 0.2.0
+@Updated : 2020-11-03
+@Version : 0.2.1
 @Desc    :
 """
 from typing import *
@@ -16,12 +16,14 @@ class RegexHint:
 
 
 class AstHint:
-    LineNo = str
-    """ -> 'line{num}' -> num: 0, 1, 2, ... """
-    AstNode = Dict[str, Any]
+    LineNo = str  # 之所以用 str, 是为了让 Python dict 在输出或读取 json 文件时
+    #   键的类型一致 (用 int 作为键的话, json 文件中会转换成 str).
+    """ -> 'line{num}' -> num: 从 0 开始数 """
+    AstNode = Dict[str, Union[str, int, Dict[str, Any]]]
     """ -> {
-            'lineno': str,
-            'line': str,
+            'lineno': str 'line{num}',
+            'line': str,  # 原始的行内容. 便于还原输出
+            'line_stripped': str,  # 去除了每行的前面的空格. 便于分析结构
             'level': <int 0, 4, 8, ...>,
             'parent': str lineno,
             'children': {
@@ -32,7 +34,7 @@ class AstHint:
         }
     """
     AstNodeList = List[AstNode]
-    AstTree = Dict[str, AstNode]
+    AstTree = Dict[LineNo, AstNode]
     """ -> {str lineno: dict ast_tree_node, ...} """
 
 
@@ -67,5 +69,14 @@ class CompAstHint(AstHint):
         }
     """
     IDs = Dict[str, Component]
+    """ -> {
+            buitin_id: comp, auto_id: comp, custom_id: comp
+                -> buitin_id: 'root'
+                -> auto_id: 'id1', 'id2', 'id3', ...
+                -> custom_id: based on the source pyml code, notice that its
+                    first letter must be a lower case (additional '_' before
+                    first letter is allowed)
+        }
+    """
     Props = Dict[str, List[Any]]
     """ -> {str prop: [comp1, comp2, comp3, ...], ...} """

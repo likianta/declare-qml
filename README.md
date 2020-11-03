@@ -1,10 +1,10 @@
-# PYML 是什么?
+# PyML 是什么?
 
-PYML 是 Python 版的 QML, 可在声明式 UI 中引用 Python 的模块.
+PyML (Python Markup Language) 是 Python 版的 QML, 可在声明式 UI 中引用 Python 的模块.
 
-PYML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处.
+PyML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处.
 
-PYML 糅合了 qml, enaml, kv lang 中的一些特色语法, 写出来的代码看起来长这样:
+PyML 糅合了 qml, enaml, kv lang 中的一些特色语法, 写出来的代码看起来长这样:
 
 **示例: 矩形缩放动画**
 
@@ -30,9 +30,10 @@ comp MyWindow(Window): @win  # 使用 `@win` 声明一个 id (`id: win` 同样�
         #   2. `'fill'` 表示设置宽高与父组件一致
         #   3. `size` 支持的类型有: 
         #       1. str: 'fill', 'ifill', 'ofill', 'wrap', 'iwrap', 'owrap' 
-        #       2. tuple: `(width, height)`, `width, height` 
-        #       3. list: `[width, height]` 
-        #       4. iter: `{'width': w, 'height': h}.values()`, ... 
+        #       2. size: `parent.size`, etc. 
+        #       3. tuple: `(width, height)`, `width, height` 
+        #       4. list: `[width, height]` 
+        #       5. *iter: `*{'width': w, 'height': h}.values()`, etc.
 
         Rectangle:
             width: 100

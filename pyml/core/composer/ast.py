@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.2.0
+@Version  : 0.2.2
 @Created  : 2020-11-02
-@Updated  : 2020-11-02
+@Updated  : 2020-11-03
 @Desc     :
     表述:
         - no, lineno: 行号. 格式为 'line{num}'.
@@ -37,14 +37,15 @@ class AST:
     
     @staticmethod
     def _build_tree(code_lines: list) -> Hint.AstTree:
-        root = tree = {  # type: Hint.AstTree
-            'lineno'  : -1,
-            'line': None,
+        virtual_root_node = {  # type: Hint.AstNode
+            'lineno'  : '',
             'level'   : -4,  # abbreviation: lv
-            'parent': None,
+            'parent'  : None,
             'children': {}
+            #           ^^ 这里才是我们最终要的结果, virtual_root_node 本身只是
+            #              一个脚手架.
         }
-        node_chain = [root]
+        node_chain = [virtual_root_node]
         """ How does node chain work?
 
             if curr_lv > last_lv:
@@ -77,13 +78,13 @@ class AST:
         """
         
         last_lv = -4
-
+        
         def _get_level(line):
             pattern = re.compile(r'^ *')
             whitespaces = pattern.match(line).group()
             return len(whitespaces)
             #   assert len(whitespaces) % 4 == 0
-
+        
         for curr_no, curr_ln in enumerate(code_lines):
             #   curr_no: current line number; curr_ln: current line
             if curr_ln.strip() == '':
@@ -103,35 +104,36 @@ class AST:
                 node_chain = node_chain[:pos]
             curr_node = node_chain[-1]['children'].setdefault(
                 f'line{curr_no}', {
-                    'lineno'  : f'line{curr_no}',
-                    'line'    : curr_ln.lstrip(),
-                    'level'   : curr_lv,
-                    'parent'  : node_chain[-1],
-                    #   'parent'  : node_chain[-1]['lineno'],
-                    'children': {},
+                    'lineno'       : f'line{curr_no}',
+                    #   'lineno'  : curr_no,
+                    'line_stripped': curr_ln.lstrip(),
+                    'line'         : curr_ln,
+                    'level'        : curr_lv,
+                    'parent'       : node_chain[-1]['lineno'],
+                    #   'parent'  : node_chain[-1],  # 未采用, 这样会导致输出
+                    #       json 时产生回环错误.
+                    'children'     : {},
                 }
             )
             node_chain.append(curr_node)
             
             last_lv = curr_lv
         
-        from lk_utils.read_and_write import dumps
-        dumps(tree, './test.json')  # TEST
-        
-        return tree
-
+        out = virtual_root_node['children']  # type: Hint.AstTree
+        return out
+    
     @staticmethod
     def _build_flat_tree(tree):
         out = {}
         
-        def _recurse(node: Hint.AstTree):
-            for k, v in node.items():
-                out[k] = v
-                _recurse(v['children'])
+        def _recurse(subtree: Hint.AstTree):
+            for lineno, node in subtree.items():
+                out[lineno] = node
+                _recurse(node['children'])
         
         _recurse(tree)
         return out
-
+    
     def get_compdef_blocks(self):
         """
         注意: 当前版本不支持嵌套组件声明. 也就是说:
@@ -143,15 +145,26 @@ class AST:
         out = []
         for no, node in self._tree.items():
             assert node['level'] == 0
-            if node['line'].startswith('comp '):
+            if node['line_stripped'].startswith('comp '):
                 out.append(node)
         return out
     
+    @staticmethod
+    def output_plain_text_from_struct(struct: Hint.AstNode):
+        """ 将 struct 转换为纯字符串. 与 self._build_tree() 的过程相反. """
+        out = [struct['line']]
+        
+        def _recurse(subtree: Hint.AstTree):
+            for no, node in subtree.items():
+                out.append(node['line'])
+                _recurse(node['children'])
+        
+        _recurse(struct['children'])
+        return '\n'.join(out)
 
+
+'''
 class CompAst(AST):  # DELETE ME
-    """
-    
-    """
     
     def __init__(self, pyml_text: str):
         super().__init__(pyml_text)
@@ -160,13 +173,13 @@ class CompAst(AST):  # DELETE ME
     
     def _lock_to_compdef_blocks(self):
         """ Filter top level nodes and get only 'comp_def' nodes. """
-
+        
         def _get_keyword(line):
             # Take the first word as 'key'.
             pattern = re.compile(r'\w+')
             first_word = pattern.search(line).group()
             return first_word
-
+        
         new_tree = {}  # type: Hint.AstTree
         for no, node in self._tree.items():
             assert node['level'] == 0
@@ -174,15 +187,15 @@ class CompAst(AST):  # DELETE ME
                 node['field'] = 'comp_def'
                 new_tree[no] = node
         self._tree = new_tree
-
-    def _add_field_info(self):
     
+    def _add_field_info(self):
+        
         def _get_keyword(line):
             # Take the first word as 'key'.
             pattern = re.compile(r'\w+')
             first_word = pattern.search(line).group()
             return first_word
-    
+        
         def _is_qml_comp_name(name):
             pattern = re.compile(r'[A-Z][a-zA-Z]+')
             if pattern.search(name):
@@ -199,13 +212,13 @@ class CompAst(AST):  # DELETE ME
                 node['field'] = 'comp_instance'
             else:
                 pass
-
+    
     def analyse_compdef_block(self):
         self._global_scanning()
         
         for block in self._tree.values():
             pass
-        
+    
     def _global_scanning(self):
         """ 扫描 id. """
         
@@ -222,8 +235,9 @@ class CompAst(AST):  # DELETE ME
                 
                 if 'children' in block:
                     _recurse(block['children'].values())
-                    
+        
         _recurse(self._tree.values())
     
     def _line_scanning(self):
         pass
+'''

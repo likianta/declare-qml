@@ -1,12 +1,14 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : __init__.py
-@Version  : 0.2.1
+@Version  : 0.2.3
 @Created  : 2020-11-02
 @Updated  : 2020-11-03
 @Desc     :
 """
 import re
+
+from lk_logger import lk
 
 from pyml.core._typing_hints import CompAstHint
 from pyml.core.composer.ast import AST
@@ -16,15 +18,15 @@ from pyml.core.composer.mask import Mask
 class Composer:
     
     def __init__(self, pyml_text: str):
-        self.pyml_text = pyml_text
-        #   self.pyml_text = re.sub(r'\t', '    ', pyml_text)
+        self._pyml_text = pyml_text
+        #   self._pyml_text = re.sub(r'\t', '    ', pyml_text)
     
     def main(self):
         mask = self._collapse_code_block()
         ast = AST(mask.plain_text)
         comp_blocks = ast.get_compdef_blocks()
         for block in comp_blocks:
-            ComponentBlockComposer(block)  # TODO
+            CompBlockComposer(ast.output_plain_text_from_struct(block), block)  # TODO
     
     def _collapse_code_block(self):
         """ 折叠 "代码块". 将块注释, 行注释, 字符串, 括号等替换为掩码, 以便于后
@@ -48,7 +50,7 @@ class Composer:
         :ref: 'docs/Composer 掩码处理效果示例.md'
         :return:
         """
-        mask = Mask(self.pyml_text)
+        mask = Mask(self._pyml_text)
         
         # 1. 将末尾以 \\ 换行的内容拼接回来.
         #    例如 'a = "xy" \\\n    "z"' -> 'a = "xy" {mask}    "z"'.
@@ -75,18 +77,148 @@ class Composer:
         return mask
 
 
-class ComponentBlockComposer:
+class CompBlockComposer:
     
-    def __init__(self, comp_block: CompAstHint.AstNode):
-        self._comp_block = comp_block
-        self.ids = {
-            'root': comp_block,
-        }  # type: CompAstHint.IDs
+    def __init__(self, pyml_text, comp_block: CompAstHint.AstNode):
+        self._pyml_text = pyml_text
+        self._comp_block = comp_block  # a single comp block
+        
+        self.ids = {}  # type: CompAstHint.IDs
+        self._build_ids()  # `self._comp_block` and `self.ids` got updated
     
+    def _build_ids(self):
+        """
+        
+        :return: {
+                ...
+                'field': {
+                    relative_id: absolute_id,
+                    ...
+                        -> relative_id: <'root', 'parent', 'self'>
+                        -> absolute_id: see `self.ids` dict
+                }
+            }
+        """
+        
+        # noinspection PyUnboundLocalVariable
+        def _custom_id(line: str):
+            # please pass node['line_stripped'] to the param
+            if ('@' in line) and \
+                    (match := re.compile(r'(?<= @)\w+').search(line)):
+                _id = match.group().split('@', 1)[1]
+            elif (line.startswith('id')) and \
+                    (match := re.compile(r'^id *: *\w+').search(line)):
+                _id = match.group().rsplit(':', 1)[-1].strip()
+            else:
+                _id = ''
+            return _id
+        
+        def _recurse(subtree: CompAstHint.AstTree, parent_id):
+            for node in subtree.values():
+                if self._is_component_name(node['line_stripped']):
+                    self_id = self._register_id(node)
+                else:
+                    self_id = parent_id
+                node['field'] = {
+                    'root'  : 'root',
+                    'parent': parent_id,
+                    'self'  : self_id,
+                }
+                # 位置写得有点分散, 待优化
+                if _id := _custom_id(node['line_stripped']):
+                    self._register_id(node, _id)
+                _recurse(node['children'], self_id)
+        
+        # ----------------------------------------------------------------------
+        
+        self._comp_block.update({
+            'field': {
+                'root'  : 'root',
+                'parent': '',
+                'self'  : self._register_id(self._comp_block, 'root'),
+            }
+        })
+        # 位置写得有点分散, 待优化
+        if _id := _custom_id(self._comp_block['line_stripped']):
+            self._register_id(self._comp_block, _id)
+        
+        _recurse(self._comp_block['children'],
+                 self._comp_block['field']['self'])
+    
+    _simple_num = 0  # see `self._register_id`
+    
+    def _register_id(self, node: CompAstHint.AstNode, comp_id=''):
+        if comp_id == '':
+            self._simple_num += 1
+            comp_id = f'id{self._simple_num}'
+        self.ids[comp_id] = node
+        setattr(self.ids, comp_id, node)
+        return comp_id
+    
+    @staticmethod
+    def _is_component_name(name) -> bool:
+        """ 这是一个临时的方案, 用于判断 name 是否为组件命名格式: 如果是, 则认为
+            它是组件; 否则不是组件.
+        
+        WARNING: 该方法仅通过命名格式来判断, 不具有可靠性! 未来会通过分析 import
+            命名空间来判断.
+            
+        :param name: 请传入 node['line_stripped'] <- node: CompAstHint.AstNode
+        :return:
+        """
+        pattern = re.compile(r'[A-Z]\w+')
+        return bool(pattern.match(name))
+
     def main(self):
-        # self._extend_props()
-        self.global_scanning()
-        self.line_scanning()
+        # 组件
+        pass
+    
+        # 属性
+        pattern = re.compile(
+            r'^ *(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)$'
+            #    ^----------^  ^-------------------^  ^--^
+            #     property      operator               expression
+        )
+        for match in pattern.finditer(self._pyml_text):
+            prop, oper, expr = match.group(1), match.group(2), match.group(3)
+            lk.loga(prop, oper, expr)
+
+    '''
+    def _cascade_code_block(self):  # DELETE ME
+        """ CompDefBlock 是 PyML 特有的语法块, 具有鲜明的 PyML 语法特征. 我们利
+            用这些特征来 "折叠" 代码块, 以便于后续分析.
+            
+        PyML 语法特征:
+            属性和值以下面的基本形式成立:
+                prop operator value (POV)
+                prop operator reference (POR)
+                prop operator expression (POE)
+                
+            例如:
+                width: 100
+                ^    ^ ^
+                P    O V
+            
+                width <= height
+                ^     ^  ^
+                P     O  R
+                
+                width ::
+                |   if height + 5 > 10:
+                |   | | return height
+                |   else:
+                |   | | return 10
+                ^   ^ ^
+                P   E O
+        """
+        mask = Mask(self._pyml_text)
+        
+        mask.main(re.compile(r' *(?!<=|=>|<=>|:=|::|:|=) *'))
+        mask.main(re.compile(r'_*[a-z]\w*(?={mask_holder_\d+})'))
+        mask.main(re.compile(r'(?<={mask_holder_\d{1, 9}})\w+'))
+        mask.main(re.compile(
+            r'(?<={mask_holder_\d{1, 9}})(?:.|\n)*?(?={mask_holder_\d+})')
+        )
     
     def global_scanning(self):
         """ Find and store ids. """
@@ -155,6 +287,6 @@ class ComponentBlockComposer:
                     qml_codes.append(
                         ' ' * node['level'] + 'property var {prop}'
                     )
-                    py_codes.append(
+                    py_codes.append()
                     
-                    )
+    '''
