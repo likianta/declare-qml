@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : composer.py
-@Version  : 0.2.6
+@Version  : 0.2.8
 @Created  : 2020-11-02
-@Updated  : 2020-11-03
+@Updated  : 2020-11-04
 @Desc     :
 """
 import re
@@ -26,7 +26,8 @@ class Composer:
         ast = AST(mask.plain_text)
         comp_blocks = ast.get_compdef_blocks()
         for block in comp_blocks:
-            CompBlockComposer(ast.output_plain_text_from_struct(block), block)  # TODO
+            CompBlockComposer(ast.output_plain_text_from_struct(block), block)
+            # TODO
     
     def _collapse_code_block(self):
         """ 折叠 "代码块". 将块注释, 行注释, 字符串, 括号等替换为掩码, 以便于后
@@ -81,10 +82,10 @@ class Composer:
         #                      ^----------------------^
         #    边的花括号也折叠.
         mask.main(re.compile(
-            r'{(?!mask_holder_\d+})(?:{mask_holder_\d+\}|[^}])*?}'
-            # ||  ^A-------------^||  ^B---------------^ ^C-^|  |
-            # |^D-----------------^^E------------------------^  |
-            # ^F------------------------------------------------^
+            r'{(?!mask_holder_\d+})(?:{mask_holder_\d+}|[^}])*?}'
+            # ||  ^A-------------^||  ^B--------------^ ^C-^|  |
+            # |^D-----------------^^E-----------------------^  |
+            # ^F-----------------------------------------------^
             #   A: 当左花括号右边不是 `mask_holder_\d+}` 时继续
             #   B: 当匹配到 `{mask_holder_\d+}` 时继续
             #   C: 或者当匹配到非 `}` 时继续 (包括: 遇到换行符, 也继续)
@@ -99,16 +100,18 @@ class CompBlockComposer:
     def __init__(self, pyml_text, comp_block: CompAstHint.AstNode):
         self._pyml_text = pyml_text
         self._comp_block = comp_block  # a single comp block
+        self._comp_block_tree = {comp_block['lineno']: comp_block}
         
         self.ids = {}  # type: CompAstHint.IDs
         self._build_ids()  # `self._comp_block` and `self.ids` got updated
-    
+        self._build_field()
+
     def _build_ids(self):
         """
         
         :return: {
                 ...
-                'field': {
+                'context': {
                     relative_id: absolute_id,
                     ...
                         -> relative_id: <'root', 'parent', 'self'>
@@ -116,7 +119,7 @@ class CompBlockComposer:
                 }
             }
         """
-        
+    
         # noinspection PyUnboundLocalVariable
         def _custom_id(line: str):
             # please pass node['line_stripped'] to the param
@@ -129,27 +132,28 @@ class CompBlockComposer:
             else:
                 _id = ''
             return _id
-        
-        def _recurse(subtree: CompAstHint.AstTree, parent_id):
-            for node in subtree.values():
+    
+        def _recurse(tree: CompAstHint.AstTree, parent):
+            for node in tree.values():
                 if self._is_component_name(node['line_stripped']):
-                    self_id = self._register_id(node)
+                    node['context'] = {
+                        'root'  : 'root',
+                        'parent': parent['context']['self'],
+                        'self'  : self._register_id(node),
+                    }
                 else:
-                    self_id = parent_id
-                node['field'] = {
-                    'root'  : 'root',
-                    'parent': parent_id,
-                    'self'  : self_id,
-                }
-                # 位置写得有点分散, 待优化
-                if _id := _custom_id(node['line_stripped']):
-                    self._register_id(node, _id)
-                _recurse(node['children'], self_id)
-        
+                    node['context'] = parent['context']
+                    
+                    # 位置写得有点分散, 待优化
+                    if _id := _custom_id(node['line_stripped']):
+                        self._register_id(parent, _id)
+                        
+                _recurse(node['children'], node)
+    
         # ----------------------------------------------------------------------
-        
+    
         self._comp_block.update({
-            'field': {
+            'context': {
                 'root'  : 'root',
                 'parent': '',
                 'self'  : self._register_id(self._comp_block, 'root'),
@@ -158,9 +162,32 @@ class CompBlockComposer:
         # 位置写得有点分散, 待优化
         if _id := _custom_id(self._comp_block['line_stripped']):
             self._register_id(self._comp_block, _id)
+    
+        _recurse(self._comp_block['children'], self._comp_block)
+
+    def _build_field(self):
+        """
         
-        _recurse(self._comp_block['children'],
-                 self._comp_block['field']['self'])
+        :return: {
+                'field': <'comp_def', 'comp_body', 'attr', 'style', 'children'>,
+                ...
+            }
+        """
+        pattern = re.compile(r'<(\w+)>')
+        
+        def _recurse(subtree: CompAstHint.AstTree):
+            for node in subtree.values():
+                ln = node['line_stripped']
+                if ln.startswith('comp '):
+                    field = 'comp_def'
+                elif m := pattern.match(ln):
+                    field = m.group(1)
+                else:
+                    field = 'comp_body'
+                node['field'] = field
+                _recurse(node['children'])
+        
+        _recurse(self._comp_block_tree)
     
     _simple_num = 0  # see `self._register_id`
     
@@ -187,33 +214,72 @@ class CompBlockComposer:
         pattern = re.compile(r'[A-Z]\w+')
         return bool(pattern.match(name))
 
-    def main(self):
-        # 组件
-        pass
-    
-        # 属性
+    def _extract_properties(self):
+        out = {}  # {parent_id: {prop: (operator, raw_expr)}}
+        
         pattern = re.compile(
             r'(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)'
             # ^----------^  ^-------------------^  ^--^
             #  property      operator               expression
         )
-        for match in pattern.finditer(self._pyml_text):
-            prop, oper, expr = match.group(1), match.group(2), match.group(3)
-            lk.loga('{:15}\t{:^5}\t{:<}'.format(prop, oper, expr or '""'))
-            #        ^A--^  ^B--^  ^C-^
-            #   A: 右对齐, 宽度为 15; B: 居中, 宽度为 5; C: 左对齐, 宽度不限
-            if not expr:
-                """ 说明遇到了这类情况 (示例):
-                        width:
-                            if height > 10:
-                                return 10
-                            else:
-                                return height
-                    其中 prop = 'width', oper = ':', expr 捕获到的是 '', 但其实
-                    应该取它的块结构. 所以下面我们就做这个工作.
-                """
-                pass
-
+        
+        pseudo_fields = (
+            'children', 'attr', 'style',
+        )
+        
+        def _recurse(tree: CompAstHint.AstTree):
+            for node in tree.values():
+                
+                if node['field'] in pseudo_fields:
+                    _recurse(node['children'])
+                    continue
+                    
+                for match in pattern.finditer(node['line_stripped']):
+                    prop, oper, expr = \
+                        match.group(1), match.group(2), match.group(3)
+                    lk.loga('{:15}\t{:^5}\t{:<}'.format(prop, oper, expr))
+                    #        ^A--^  ^B--^  ^C-^
+                    #   A: 右对齐, 宽度 15; B: 居中, 宽度 5; C: 左对齐, 宽度不限
+                    
+                    if expr:
+                        """
+                        说明遇到了这类情况 (示例):
+                            width: height + 10
+                        根据 pyml 语法要求, 单行的属性赋值, 不可以有子语法块, 也
+                        就是说下面的情况是不允许的:
+                            width: height + 10
+                                if height + 10 > 10:
+                                    return 10
+                                else:
+                                    return height
+                        """
+                        assert bool(node['children']) is False
+                    else:
+                        """
+                        说明遇到了这类情况 (示例):
+                            width:
+                                if height > 10:
+                                    return 10
+                                else:
+                                    return height
+                        其中 prop = 'width', oper = ':', expr 捕获到的是 '', 但
+                        其实应该取它的块结构. 所以下面我们就做这个工作.
+                        """
+    
+                        def _recurse_expr_block(tree: CompAstHint.AstTree):
+                            nonlocal expr
+                            for node in tree.values():
+                                expr += node['line'] + '\n'
+                                _recurse_expr_block(node['children'])
+    
+                        _recurse_expr_block(node['children'])
+                    
+                    x = out.setdefault(node['context']['parent'], {})
+                    x[prop] = (oper, expr)
+        
+        _recurse(self._comp_block['children'])
+        return out
+        
     '''
     def _cascade_code_block(self):  # DELETE ME
         """ CompDefBlock 是 PyML 特有的语法块, 具有鲜明的 PyML 语法特征. 我们利

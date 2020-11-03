@@ -106,7 +106,7 @@ class AST:
                 f'line{curr_no}', {
                     'lineno'       : f'line{curr_no}',
                     #   'lineno'  : curr_no,
-                    'line_stripped': curr_ln.lstrip(),
+                    'line_stripped': curr_ln.strip(),
                     'line'         : curr_ln,
                     'level'        : curr_lv,
                     'parent'       : node_chain[-1]['lineno'],

@@ -33,7 +33,7 @@ class AstHint:
             ...
         }
     """
-    AstNodeList = List[AstNode]
+    AstNodeList = Union[List[AstNode], Iterable[AstNode]]
     AstTree = Dict[LineNo, AstNode]
     """ -> {str lineno: dict ast_tree_node, ...} """
 
