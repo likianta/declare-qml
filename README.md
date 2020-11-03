@@ -4,7 +4,7 @@ PYML 是 Python 版的 QML, 可在声明式 UI 中引用 Python 的模块.
 
 PYML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处.
 
-PYML 写出来的代码看起来长这样:
+PYML 糅合了 qml, enaml, kv lang 中的一些特色语法, 写出来的代码看起来长这样:
 
 **示例: 矩形缩放动画**
 
@@ -16,23 +16,32 @@ import pyml.qtquick.controls
 import pyml.qtquick.window
 
 
-comp MyWindow(Window): @win
+comp MyWindow(Window): @win  # 使用 `@win` 声明一个 id (`id: win` 同样支持)
     visible: True
     color: '#cccccc'
     width: 600
     height: 800
 
     Item: @container
-        attr active: False
-        margins: 20
+        attr active: False  # `attr` 声明一个自定义属性
+        margin: 20
         size: 'fill'
+        #   1. `size` 是 `(width, height)` 的代理
+        #   2. `'fill'` 表示设置宽高与父组件一致
+        #   3. `size` 支持的类型有: 
+        #       1. str: 'fill', 'ifill', 'ofill', 'wrap', 'iwrap', 'owrap' 
+        #       2. tuple: `(width, height)`, `width, height` 
+        #       3. list: `[width, height]` 
+        #       4. iter: `{'width': w, 'height': h}.values()`, ... 
 
         Rectangle:
             width: 100
             height: 200
             color: '#ffffff'
             radius: 8
-            anim:
+            border.width: 1
+            border.color: '#cccccc'
+            anim:  # 对动画属性做了简化
                 NumberAnimation:
                     when: container.active
                     props:

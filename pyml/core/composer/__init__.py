@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : __init__.py
-@Version  : 0.2.0
+@Version  : 0.2.1
 @Created  : 2020-11-02
-@Updated  : 2020-11-02
+@Updated  : 2020-11-03
 @Desc     :
 """
 import re
@@ -82,12 +82,12 @@ class ComponentBlockComposer:
         self.ids = {
             'root': comp_block,
         }  # type: CompAstHint.IDs
-        
+    
     def main(self):
         # self._extend_props()
         self.global_scanning()
         self.line_scanning()
-
+    
     def global_scanning(self):
         """ Find and store ids. """
         
@@ -104,14 +104,14 @@ class ComponentBlockComposer:
                     key = match.group().rsplit(':', 1)[-1].strip()
                     self.ids[key] = node
                 _recurse(node['children'].values())
-                
-        _recurse((self._comp_block,))
         
+        _recurse((self._comp_block,))
+    
     # def _update_prop(self, node, prop, value):
     #     if prop not in node:
     #         node[prop] = []
     #     node[prop].append(value)
-
+    
     def line_scanning(self):
         operator_pattern = re.compile(r'<=|=>|<=>|:=|::|:|=')
         
