@@ -1,7 +1,7 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : mask.py
-@Version  : 0.2.1
+@Version  : 0.2.3
 @Created  : 2020-11-02
 @Updated  : 2020-11-03
 @Desc     : 
@@ -25,7 +25,7 @@ class Mask:
         ).findall(pyml_text)
         if self._conflicts:
             lk.loga('Found {} conflicts'.format(len(self._conflicts)))
-            
+        
         self._holder_pattern = re.compile(r'{mask_holder_\d+}')
         self._text = self._holder_pattern.sub(
             '{mask_holder_conflict}', pyml_text
@@ -83,16 +83,43 @@ class Mask:
             origin text in the future (see `self.plain_text()`).
 
         :param pattern:
-        :param cmd: <str 'strip_linebreaks', 'abandon'>
+        :param cmd: <str 'strip_linebreaks', 'abandon', 'recurse'>
             strip_linebreaks: replace '\n' to ' '
             abandon: repalce matched string to ' '
+            circle: 针对这种情况:
+                    (A, (B), (C), D)
+                    |   ^-^  ^-^   |
+                    ^--------------^
+                我们希望捕获到三个, 但只通过一次正则表达式似乎没法做到 (目前能想
+                到的写法最多匹配到两个).
+                所以增加一个此命令, 用于循环检测是否全部匹配到.
+            circle+strip_linebreaks: 复合指令, 见上述描述
             
         :return:
         """
-        text = self._text
-        for match in pattern.finditer(text):
+        
+        def _generator1():
+            text = self._text
+            for match in pattern.finditer(text):
+                yield match
+        
+        def _generator2():
+            while match := pattern.search(self._text):
+                yield match
+        
+        if cmd != 'circle' and cmd != 'circle+strip_linebreaks':
+            gen = _generator1
+        else:
+            gen = _generator2
+        
+        # ----------------------------------------------------------------------
+        
+        for match in gen():
             match_str = match.group(0)
-            if cmd == '':
+            
+            if cmd == '' or \
+                    cmd == 'circle' or \
+                    cmd == 'circle+strip_linebreaks':
                 mask_to = match_str
             elif cmd == 'abandon':
                 mask_to = ''
@@ -100,6 +127,7 @@ class Mask:
                 mask_to = match_str.replace('\n', ' ')
             else:
                 raise Exception('Unknown command', cmd, match_str)
+            
             holder = self._create_mask_holder(mask_to)
             self._text = self._text.replace(match_str, holder, 1)
             """ FIXME: 隐患
@@ -154,7 +182,7 @@ class Mask:
         key, val = f'mask_holder_{self._keyx}', s
         self._mask[key] = val
         return '{' + key + '}'
-
+    
     @property
     def masked_text(self):
         return self._text

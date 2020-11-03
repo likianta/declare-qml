@@ -1,7 +1,7 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
-@FileName : __init__.py
-@Version  : 0.2.3
+@FileName : composer.py
+@Version  : 0.2.6
 @Created  : 2020-11-02
 @Updated  : 2020-11-03
 @Desc     :
@@ -70,9 +70,25 @@ class Composer:
         # 4. 行注释
         mask.main(re.compile(r'#.*'), cmd='abandon')
         # 5. 大中小括号
-        mask.main(re.compile(r'\((?:.|\n)*?\)'), cmd='strip_linebreaks')
-        mask.main(re.compile(r'\[(?:.|\n)*?]'), cmd='strip_linebreaks')
-        mask.main(re.compile(r'{{(?:.|\n)*?}}'), cmd='strip_linebreaks')
+        mask.main(re.compile(r'\((?:[^(]|\n)*?\)'),
+                  cmd='circle+strip_linebreaks')
+        mask.main(re.compile(r'\[(?:[^\[]|\n)*?]'),
+                  cmd='circle+strip_linebreaks')
+        mask.main(re.compile(r'{(?!mask_holder_\d+})(?:[^{]|\n)*?}'),
+                  cmd='circle+strip_linebreaks')
+        #    到这一步, 会出现 `{A, {mask1}, {mask2}, B}` 的情况, 我们需要把最外
+        #                      ^----------------------^
+        #    边的花括号也折叠.
+        mask.main(re.compile(
+            r'{(?!mask_holder_\d+})(?:{mask_holder_\d+\}|[^}])*?}'
+            # ||  ^A-------------^||  ^B---------------^ ^C-^|  |
+            # |^D-----------------^^E------------------------^  |
+            # ^F------------------------------------------------^
+            #   A: 当左花括号右边不是 `mask_holder_\d+}` 时继续
+            #   B: 当匹配到 `{mask_holder_\d+}` 时继续
+            #   C: 或者当匹配到非 `}` 时继续 (包括: 遇到换行符, 也继续)
+            #   D: 非贪婪地匹配, 直到遇到了不符合 B, C 情形的右花括号结束
+        ), cmd='strip_linebreaks')
         
         return mask
 
@@ -105,10 +121,10 @@ class CompBlockComposer:
             # please pass node['line_stripped'] to the param
             if ('@' in line) and \
                     (match := re.compile(r'(?<= @)\w+').search(line)):
-                _id = match.group().split('@', 1)[1]
+                _id = match.group(0)
             elif (line.startswith('id')) and \
-                    (match := re.compile(r'^id *: *\w+').search(line)):
-                _id = match.group().rsplit(':', 1)[-1].strip()
+                    (match := re.compile(r'^id *: *(\w+)').search(line)):
+                _id = match.group(1)
             else:
                 _id = ''
             return _id
@@ -151,8 +167,9 @@ class CompBlockComposer:
         if comp_id == '':
             self._simple_num += 1
             comp_id = f'id{self._simple_num}'
-        self.ids[comp_id] = node
-        setattr(self.ids, comp_id, node)
+        # self.ids[comp_id] = node  # A
+        self.ids[comp_id] = node['lineno']  # B
+        # setattr(self.ids, comp_id, node)
         return comp_id
     
     @staticmethod
@@ -175,13 +192,13 @@ class CompBlockComposer:
     
         # 属性
         pattern = re.compile(
-            r'^ *(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)$'
-            #    ^----------^  ^-------------------^  ^--^
-            #     property      operator               expression
+            r'(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)'
+            # ^----------^  ^-------------------^  ^--^
+            #  property      operator               expression
         )
         for match in pattern.finditer(self._pyml_text):
             prop, oper, expr = match.group(1), match.group(2), match.group(3)
-            lk.loga(prop, oper, expr)
+            lk.loga('{:15}\t{:^5}\t{:<}'.format(prop, oper, expr or '""'))
 
     '''
     def _cascade_code_block(self):  # DELETE ME
