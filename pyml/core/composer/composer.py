@@ -44,6 +44,7 @@ class Composer:
             indent | code
                  0 | def calc(x, y):
                  4 |     a = (x + y) * 2
+                 
         这样, 得到的处理后的代码是严格按照缩进来表示嵌套层次的代码, 有利于后面用
         `pyml.core.composer.ast.AST` 构建语法树.
 
@@ -87,7 +88,7 @@ class Composer:
             #   A: 当左花括号右边不是 `mask_holder_\d+}` 时继续
             #   B: 当匹配到 `{mask_holder_\d+}` 时继续
             #   C: 或者当匹配到非 `}` 时继续 (包括: 遇到换行符, 也继续)
-            #   D: 非贪婪地匹配, 直到遇到了不符合 B, C 情形的右花括号结束
+            #   F: 非贪婪地匹配, 直到遇到了不符合 B, C 情形的右花括号结束
         ), cmd='strip_linebreaks')
         
         return mask
@@ -199,6 +200,19 @@ class CompBlockComposer:
         for match in pattern.finditer(self._pyml_text):
             prop, oper, expr = match.group(1), match.group(2), match.group(3)
             lk.loga('{:15}\t{:^5}\t{:<}'.format(prop, oper, expr or '""'))
+            #        ^A--^  ^B--^  ^C-^
+            #   A: 右对齐, 宽度为 15; B: 居中, 宽度为 5; C: 左对齐, 宽度不限
+            if not expr:
+                """ 说明遇到了这类情况 (示例):
+                        width:
+                            if height > 10:
+                                return 10
+                            else:
+                                return height
+                    其中 prop = 'width', oper = ':', expr 捕获到的是 '', 但其实
+                    应该取它的块结构. 所以下面我们就做这个工作.
+                """
+                pass
 
     '''
     def _cascade_code_block(self):  # DELETE ME
