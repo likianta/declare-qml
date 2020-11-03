@@ -1,7 +1,7 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : composer.py
-@Version  : 0.2.8
+@Version  : 0.2.9
 @Created  : 2020-11-02
 @Updated  : 2020-11-04
 @Desc     :
@@ -10,7 +10,7 @@ import re
 
 from lk_logger import lk
 
-from pyml.core._typing_hints import CompAstHint
+from pyml.core._typing_hints import ComposerHint as Hint
 from pyml.core.composer.ast import AST
 from pyml.core.composer.mask import Mask
 
@@ -26,7 +26,7 @@ class Composer:
         ast = AST(mask.plain_text)
         comp_blocks = ast.get_compdef_blocks()
         for block in comp_blocks:
-            CompBlockComposer(ast.output_plain_text_from_struct(block), block)
+            ComponentComposer(ast.output_plain_text_from_struct(block), block)
             # TODO
     
     def _collapse_code_block(self):
@@ -95,14 +95,14 @@ class Composer:
         return mask
 
 
-class CompBlockComposer:
+class ComponentComposer:
     
-    def __init__(self, pyml_text, comp_block: CompAstHint.AstNode):
+    def __init__(self, pyml_text, comp_block: Hint.AstNode):
         self._pyml_text = pyml_text
         self._comp_block = comp_block  # a single comp block
         self._comp_block_tree = {comp_block['lineno']: comp_block}
         
-        self.ids = {}  # type: CompAstHint.IDs
+        self.ids = {}  # type: Hint.IDs
         self._build_ids()  # `self._comp_block` and `self.ids` got updated
         self._build_field()
 
@@ -113,9 +113,9 @@ class CompBlockComposer:
                 ...
                 'context': {
                     relative_id: absolute_id,
-                    ...
                         -> relative_id: <'root', 'parent', 'self'>
                         -> absolute_id: see `self.ids` dict
+                    ...
                 }
             }
         """
@@ -133,7 +133,7 @@ class CompBlockComposer:
                 _id = ''
             return _id
     
-        def _recurse(tree: CompAstHint.AstTree, parent):
+        def _recurse(tree: Hint.AstTree, parent):
             for node in tree.values():
                 if self._is_component_name(node['line_stripped']):
                     node['context'] = {
@@ -175,7 +175,7 @@ class CompBlockComposer:
         """
         pattern = re.compile(r'<(\w+)>')
         
-        def _recurse(subtree: CompAstHint.AstTree):
+        def _recurse(subtree: Hint.AstTree):
             for node in subtree.values():
                 ln = node['line_stripped']
                 if ln.startswith('comp '):
@@ -191,7 +191,7 @@ class CompBlockComposer:
     
     _simple_num = 0  # see `self._register_id`
     
-    def _register_id(self, node: CompAstHint.AstNode, comp_id=''):
+    def _register_id(self, node: Hint.AstNode, comp_id=''):
         if comp_id == '':
             self._simple_num += 1
             comp_id = f'id{self._simple_num}'
@@ -214,8 +214,12 @@ class CompBlockComposer:
         pattern = re.compile(r'[A-Z]\w+')
         return bool(pattern.match(name))
 
-    def _extract_properties(self):
-        out = {}  # {parent_id: {prop: (operator, raw_expr)}}
+    def main(self):
+        prop_assigns = self._extract_property_assignments()
+        self._refine_property_assignments(prop_assigns)
+
+    def _extract_property_assignments(self):
+        out = {}  # {parent_id: {property: (operator, raw_expression)}}
         
         pattern = re.compile(
             r'(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)'
@@ -227,7 +231,7 @@ class CompBlockComposer:
             'children', 'attr', 'style',
         )
         
-        def _recurse(tree: CompAstHint.AstTree):
+        def _recurse(tree: Hint.AstTree):
             for node in tree.values():
                 
                 if node['field'] in pseudo_fields:
@@ -266,7 +270,7 @@ class CompBlockComposer:
                         其实应该取它的块结构. 所以下面我们就做这个工作.
                         """
     
-                        def _recurse_expr_block(tree: CompAstHint.AstTree):
+                        def _recurse_expr_block(tree: Hint.AstTree):
                             nonlocal expr
                             for node in tree.values():
                                 expr += node['line'] + '\n'
@@ -274,116 +278,14 @@ class CompBlockComposer:
     
                         _recurse_expr_block(node['children'])
                     
-                    x = out.setdefault(node['context']['parent'], {})
+                    x = out.setdefault(node['context']['self'], {})
                     x[prop] = (oper, expr)
         
         _recurse(self._comp_block['children'])
         return out
+
+    def _refine_property_assignments(self, prop_assigns: Hint.PropAssigns):
+        py_side = []
+        qml_side = []
+
         
-    '''
-    def _cascade_code_block(self):  # DELETE ME
-        """ CompDefBlock 是 PyML 特有的语法块, 具有鲜明的 PyML 语法特征. 我们利
-            用这些特征来 "折叠" 代码块, 以便于后续分析.
-            
-        PyML 语法特征:
-            属性和值以下面的基本形式成立:
-                prop operator value (POV)
-                prop operator reference (POR)
-                prop operator expression (POE)
-                
-            例如:
-                width: 100
-                ^    ^ ^
-                P    O V
-            
-                width <= height
-                ^     ^  ^
-                P     O  R
-                
-                width ::
-                |   if height + 5 > 10:
-                |   | | return height
-                |   else:
-                |   | | return 10
-                ^   ^ ^
-                P   E O
-        """
-        mask = Mask(self._pyml_text)
-        
-        mask.main(re.compile(r' *(?!<=|=>|<=>|:=|::|:|=) *'))
-        mask.main(re.compile(r'_*[a-z]\w*(?={mask_holder_\d+})'))
-        mask.main(re.compile(r'(?<={mask_holder_\d{1, 9}})\w+'))
-        mask.main(re.compile(
-            r'(?<={mask_holder_\d{1, 9}})(?:.|\n)*?(?={mask_holder_\d+})')
-        )
-    
-    def global_scanning(self):
-        """ Find and store ids. """
-        
-        # noinspection PyUnboundLocalVariable
-        def _recurse(nodes: CompAstHint.AstNodeList):
-            for node in nodes:
-                ln = node['line']
-                if ('@' in ln) and \
-                        (match := re.compile(r'(?<= @)\w+').search(ln)):
-                    key = match.group().split('@', 1)[1]
-                    self.ids[key] = node
-                elif (ln.startswith('id')) and \
-                        (match := re.compile(r'^id *: *\w+').search(ln)):
-                    key = match.group().rsplit(':', 1)[-1].strip()
-                    self.ids[key] = node
-                _recurse(node['children'].values())
-        
-        _recurse((self._comp_block,))
-    
-    # def _update_prop(self, node, prop, value):
-    #     if prop not in node:
-    #         node[prop] = []
-    #     node[prop].append(value)
-    
-    def line_scanning(self):
-        operator_pattern = re.compile(r'<=|=>|<=>|:=|::|:|=')
-        
-        def _get_comp_name(line):
-            p1 = re.compile(r'comp (\w+)\((\w+)\):')
-            p2 = re.compile(r'comp (\w+):')
-            
-            if m := p1.search(line):
-                return m.group(2), m.group(1)
-            elif m := p2.search(line):
-                return m.group(1), m.group(1)
-        
-        comp_name_qml, comp_name_py = _get_comp_name(self._comp_block['line'])
-        qml_codes = [f'{comp_name_qml}:']
-        py_codes = [f'class {comp_name_py}(PymlObject):']
-        
-        buitin_props = {}
-        custom_props = {}  # {str prop: [comp1, comp2, comp3, ...], ...}
-        
-        def _recurse(parent, line_nodes: CompAstHint.AstNodeList):
-            for node in line_nodes:
-                ln = node['line']
-                if ln.startswith('attr '):
-                    """ e.g.
-                    attr path: str
-                    attr path: 'abc'
-                    attr path: {'dir': ..., 'name': ...}
-                    attr path: FileBrowse
-                    attr path: FileBrowse:
-                        attr dir: ...
-                        attr name: ...
-                    attr path: FileBrowse()
-                    ...
-                    """
-                    op = operator_pattern.search(ln).group()
-                    prop, expr = map(lambda x: x.strip(), ln.split(op, 1))
-                    prop = prop.replace('attr ', '', 1)
-                    x = custom_props.setdefault(prop, [])
-                    x.append()
-                    
-                    qml_codes.append(
-                        ' ' * node['level'] + 'property var {prop}'
-                    )
-                    py_codes.append()
-                    
-    '''

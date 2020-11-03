@@ -2,8 +2,8 @@
 @Author  : Likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-03
-@Version : 0.2.1
+@Updated : 2020-11-04
+@Version : 0.2.3
 @Desc    :
 """
 from typing import *
@@ -42,10 +42,6 @@ class ComposerHint(RegexHint, AstHint):
     PymlText = str
     MaskHolder = Dict[str, PymlText]
     """ -> {'mask_node_{num}': str source_pyml_text_snippet, ...} """
-
-
-class CompAstHint(AstHint):
-    """ Component Abstract Syntax Tree Type Hints. """
     Component = Dict[str, Union[str, Dict[str, Any]]]
     """ -> {
             'field': <str 'comp_def', 'comp_instance', 'attr_def',
@@ -78,5 +74,5 @@ class CompAstHint(AstHint):
                     first letter is allowed)
         }
     """
-    Props = Dict[str, List[Any]]
-    """ -> {str prop: [comp1, comp2, comp3, ...], ...} """
+    PropAssigns = Dict[str, Dict[str, Tuple[str, str]]]
+    """ -> {comp_id: {prop: (operator, expression), ...}, ...} """
