@@ -222,9 +222,10 @@ class ComponentComposer:
         out = {}  # {parent_id: {property: (operator, raw_expression)}}
         
         pattern = re.compile(
-            r'(_*[a-z]\w*) *(<=|=>|<=>|:=|::|:|=) *(.*)'
-            # ^----------^  ^-------------------^  ^--^
-            #  property      operator               expression
+            r'(_*[a-z]\w*) *(<==>|<=>|==|<=|=>|:=|::|:|=) *(.*)'
+            # ^----------^  ^---------------------------^  ^--^
+            #  property      operator                       expression
+            #                注意: operator 的匹配符号的顺序必须是从长到短排
         )
         
         pseudo_fields = (
@@ -288,4 +289,10 @@ class ComponentComposer:
         py_side = []
         qml_side = []
 
-        
+        for comp_id, node in prop_assigns.items():
+            for prop, (oper, expr) in node.items():
+                # assert oper != ':='
+                if oper == ':' or oper == '=':
+                    # if expr is immutable, then treat the operator as '::'
+                    # symbol; else treat it as '<='
+                    pass
