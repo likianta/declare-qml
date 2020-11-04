@@ -3,7 +3,7 @@
 @FileName : ast.py
 @Version  : 0.2.2
 @Created  : 2020-11-02
-@Updated  : 2020-11-03
+@Updated  : 2020-11-04
 @Desc     :
     表述:
         - no, lineno: 行号. 格式为 'line{num}'.
@@ -14,7 +14,7 @@
 """
 import re
 
-from pyml.core._typing_hints import CompAstHint as Hint
+from pyml.core._typing_hints import ComposerHint as Hint
 
 
 class AST:
@@ -161,6 +161,70 @@ class AST:
         
         _recurse(struct['children'])
         return '\n'.join(out)
+
+
+class PymlAst(AST):  # DELETE ME or UPDATE
+    
+    def __init__(self, pyml_text: str):
+        super().__init__(pyml_text)
+        self._update_tree()
+
+    def _update_tree(self):
+        """
+        在 Hint.AstNode 中增加以下信息:
+            {
+                ...
+                'node_type': /str
+                    'import',
+                    'comp_def',
+                    'comp_instance',
+                    'prop_assign',
+                    'on_signal',
+                    'pseudo_field',
+                    'class_def',
+                    'func_def',
+                /,
+            }
+        
+        :return:
+        """
+        
+        def _recurse(tree: Hint.AstTree):
+            for node in tree.values():
+                ln = node['line_stripped']
+                if ln.startswith(('import ', 'from ')):
+                    node['node_type'] = 'import'
+                elif ln.startswith('comp '):
+                    node['node_type'] = 'comp_def'
+                elif ln.startswith('on_'):
+                    node['node_type'] = 'on_signal'
+                elif ln.startswith('<') and ln.endswith('>'):
+                    node['node_type'] = 'pseudo_field'
+                elif ln.startswith('class '):
+                    node['node_type'] = 'class_def'
+                elif ln.startswith('def '):
+                    node['node_type'] = 'func_def'
+                elif self._is_component_name(ln):
+                    node['node_type'] = 'comp_instance'
+                else:
+                    node['node_type'] = 'prop_assigns'
+                _recurse(node['children'])
+                
+        _recurse(self._tree)
+
+    @staticmethod
+    def _is_component_name(name) -> bool:
+        """ 这是一个临时的方案, 用于判断 name 是否为组件命名格式: 如果是, 则认为
+            它是组件; 否则不是组件.
+
+        WARNING: 该方法仅通过命名格式来判断, 不具有可靠性! 未来会通过分析 import
+            命名空间来判断.
+
+        :param name: 请传入 node['line_stripped'] <- node: CompAstHint.AstNode
+        :return:
+        """
+        pattern = re.compile(r'[A-Z]\w+')
+        return bool(pattern.match(name))
 
 
 '''

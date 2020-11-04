@@ -27,7 +27,7 @@ class AstHint:
             'level': <int 0, 4, 8, ...>,
             'parent': str lineno,
             'children': {
-                lineno: AstTreeNode,
+                lineno: AstNode,
                 ...
             },
             ...
@@ -76,3 +76,7 @@ class ComposerHint(RegexHint, AstHint):
     """
     PropAssigns = Dict[str, Dict[str, Tuple[str, str]]]
     """ -> {comp_id: {prop: (operator, expression), ...}, ...} """
+
+
+# class NodeType:
+#     Import = str

@@ -104,8 +104,9 @@ class ComponentComposer:
         
         self.ids = {}  # type: Hint.IDs
         self._build_ids()  # `self._comp_block` and `self.ids` got updated
-        self._build_field()
-
+        self._build_fields()
+        self._build_node_types()
+    
     def _build_ids(self):
         """
         
@@ -119,7 +120,7 @@ class ComponentComposer:
                 }
             }
         """
-    
+        
         # noinspection PyUnboundLocalVariable
         def _custom_id(line: str):
             # please pass node['line_stripped'] to the param
@@ -132,7 +133,7 @@ class ComponentComposer:
             else:
                 _id = ''
             return _id
-    
+        
         def _recurse(tree: Hint.AstTree, parent):
             for node in tree.values():
                 if self._is_component_name(node['line_stripped']):
@@ -147,11 +148,11 @@ class ComponentComposer:
                     # 位置写得有点分散, 待优化
                     if _id := _custom_id(node['line_stripped']):
                         self._register_id(parent, _id)
-                        
+                
                 _recurse(node['children'], node)
-    
+        
         # ----------------------------------------------------------------------
-    
+        
         self._comp_block.update({
             'context': {
                 'root'  : 'root',
@@ -162,10 +163,10 @@ class ComponentComposer:
         # 位置写得有点分散, 待优化
         if _id := _custom_id(self._comp_block['line_stripped']):
             self._register_id(self._comp_block, _id)
-    
+        
         _recurse(self._comp_block['children'], self._comp_block)
-
-    def _build_field(self):
+    
+    def _build_fields(self):
         """
         
         :return: {
@@ -175,8 +176,8 @@ class ComponentComposer:
         """
         pattern = re.compile(r'<(\w+)>')
         
-        def _recurse(subtree: Hint.AstTree):
-            for node in subtree.values():
+        def _recurse(tree: Hint.AstTree):
+            for node in tree.values():
                 ln = node['line_stripped']
                 if ln.startswith('comp '):
                     field = 'comp_def'
@@ -188,6 +189,61 @@ class ComponentComposer:
                 _recurse(node['children'])
         
         _recurse(self._comp_block_tree)
+    
+    def _build_node_types(self):
+        """
+        
+        :return: {
+                'node_type': <
+                    str
+                        'class_def',
+                        'comp_def',
+                        'comp_instance',
+                        'func_def',
+                        'import',
+                        'on_signal',
+                        'prop_assign',
+                        'pseudo_field',
+                >,
+                ...
+            }
+        """
+        _temp_token = ''
+        
+        def _recurse(tree: Hint.AstTree):
+            nonlocal _temp_token
+            
+            for node in tree.values():
+                ln = node['line_stripped']
+                # simple
+                if ln.startswith(('import ', 'from ')):
+                    node['node_type'] = 'import'
+                elif ln.startswith('comp '):
+                    node['node_type'] = 'comp_def'
+                elif ln.startswith('class '):
+                    node['node_type'] = 'class_def'
+                elif ln.startswith('def '):
+                    node['node_type'] = 'func_def'
+                # not stable
+                elif ln.startswith('<') and ln.endswith('>'):
+                    node['node_type'] = 'pseudo_field'
+                elif ln.startswith('on_'):
+                    node['node_type'] = 'on_signal'
+                # complex
+                elif ln.endswith('::'):
+                    node['node_type'] = 'prop_assigns'
+                    _temp_token = '::'
+                elif self._is_component_name(ln) and _temp_token == '':
+                    node['node_type'] = 'comp_instance'
+                else:
+                    node['node_type'] = 'prop_assigns'
+                    
+                _recurse(node['children'])
+                _temp_token = ''
+    
+        _recurse(self._comp_block_tree)
+    
+    # --------------------------------------------------------------------------
     
     _simple_num = 0  # see `self._register_id`
     
@@ -213,11 +269,13 @@ class ComponentComposer:
         """
         pattern = re.compile(r'[A-Z]\w+')
         return bool(pattern.match(name))
-
+    
+    # --------------------------------------------------------------------------
+    
     def main(self):
         prop_assigns = self._extract_property_assignments()
         self._refine_property_assignments(prop_assigns)
-
+    
     def _extract_property_assignments(self):
         out = {}  # {parent_id: {property: (operator, raw_expression)}}
         
@@ -238,7 +296,7 @@ class ComponentComposer:
                 if node['field'] in pseudo_fields:
                     _recurse(node['children'])
                     continue
-                    
+                
                 for match in pattern.finditer(node['line_stripped']):
                     prop, oper, expr = \
                         match.group(1), match.group(2), match.group(3)
@@ -270,13 +328,13 @@ class ComponentComposer:
                         其中 prop = 'width', oper = ':', expr 捕获到的是 '', 但
                         其实应该取它的块结构. 所以下面我们就做这个工作.
                         """
-    
+                        
                         def _recurse_expr_block(tree: Hint.AstTree):
                             nonlocal expr
                             for node in tree.values():
                                 expr += node['line'] + '\n'
                                 _recurse_expr_block(node['children'])
-    
+                        
                         _recurse_expr_block(node['children'])
                     
                     x = out.setdefault(node['context']['self'], {})
@@ -284,11 +342,11 @@ class ComponentComposer:
         
         _recurse(self._comp_block['children'])
         return out
-
+    
     def _refine_property_assignments(self, prop_assigns: Hint.PropAssigns):
         py_side = []
         qml_side = []
-
+        
         for comp_id, node in prop_assigns.items():
             for prop, (oper, expr) in node.items():
                 # assert oper != ':='
