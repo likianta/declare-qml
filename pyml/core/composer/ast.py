@@ -1,7 +1,7 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.2.2
+@Version  : 0.3.0
 @Created  : 2020-11-02
 @Updated  : 2020-11-04
 @Desc     :
@@ -17,27 +17,88 @@ import re
 from pyml.core._typing_hints import ComposerHint as Hint
 
 
-class AST:
+class PymlAst:
     
-    def __init__(self, pyml_text: str):
+    def __init__(self, pyml_code: str):
         """
 
-        :param pyml_text: from `Mask.get_plain_text(merge_block=True)`
+        :param pyml_code: from `Mask.get_plain_text(merge_block=True)`
         """
-        self._text = pyml_text
-        self._type_names = {  # No usage
-            'import': 'import1',
-            'from'  : 'import2',
-            'def'   : 'def',
-            'class' : 'class',
-            'comp'  : 'comp_def',
-        }
-        self._tree = self._build_tree(self._text.split('\n'))
-        self._flat_tree = self._build_flat_tree(self._tree)
-    
+        self.source_code = self._collapse_code_block(pyml_code)
+        self.source_tree = self._build_source_tree(self.source_code.split('\n'))
+        self.source_map = self._build_source_map(self.source_tree)
+        self.source_chain = self._build_source_chain(self.source_tree)
+
     @staticmethod
-    def _build_tree(code_lines: list) -> Hint.AstTree:
-        virtual_root_node = {  # type: Hint.AstNode
+    def _collapse_code_block(source_code: str) -> str:
+        """ 折叠 "代码块". 将块注释, 行注释, 字符串, 括号等替换为掩码, 以便于后
+            续的代码分析.
+            
+        本方法的目的是, 将原 pyml 代码中的所有可消除的换行符消除. 例如:
+            indent | code
+                 0 | def calc(
+                 4 |     x, y
+                 0 | ):
+                 4 |     a = (
+                 8 |         x + y
+                 4 |     ) * 2
+        变为:
+            indent | code
+                 0 | def calc(x, y):
+                 4 |     a = (x + y) * 2
+                 
+        这样, 得到的处理后的代码是严格按照缩进来表示嵌套层次的代码, 有利于后面根
+        据缩进量来快速构建代码树.
+
+        :ref: 'docs/掩码处理效果示例.md'
+        :return:
+        """
+        from pyml.core.composer.mask import Mask
+        mask = Mask(source_code)
+    
+        # 1. 将末尾以 \\ 换行的内容拼接回来.
+        #    例如 'a = "xy" \\\n    "z"' -> 'a = "xy" {mask}    "z"'.
+        mask.main(re.compile(r'\\ *\n'), cmd='strip_linebreaks')
+        # 2. 字符串掩码
+        #    示意图: '.assets/snipaste 2020-11-01 171109.png'
+        with mask.temp_mask(re.compile(r'(?<!\\)"""'), '"""'), \
+             mask.temp_mask(re.compile(r"(?<!\\)'''"), "'''"):
+            mask.main(re.compile(r'([\'"]).*?(?<!\\)\1'),
+                      cmd='strip_linebreaks')
+        # 3. 块注释
+        mask.main(re.compile(r'^ *("""|\'\'\')(?:.|\n)*?(?<!\\)\1'),
+                  cmd='abandon')
+        #    非块注释, 长字符串
+        mask.main(re.compile(r'("""|\'\'\')(?:.|\n)*?(?<!\\)\1'),
+                  cmd='strip_linebreaks')
+        # 4. 行注释
+        mask.main(re.compile(r'#.*'), cmd='abandon')
+        # 5. 大中小括号
+        mask.main(re.compile(r'\((?:[^(]|\n)*?\)'),
+                  cmd='circle+strip_linebreaks')
+        mask.main(re.compile(r'\[(?:[^\[]|\n)*?]'),
+                  cmd='circle+strip_linebreaks')
+        mask.main(re.compile(r'{(?!mask_holder_\d+})(?:[^{]|\n)*?}'),
+                  cmd='circle+strip_linebreaks')
+        #    到这一步, 会出现 `{A, {mask1}, {mask2}, B}` 的情况, 我们需要把最外
+        #                      ^----------------------^
+        #    边的花括号也折叠.
+        mask.main(re.compile(
+            r'{(?!mask_holder_\d+})(?:{mask_holder_\d+}|[^}])*?}'
+            # ||  ^A-------------^||  ^B--------------^ ^C-^|  |
+            # |^D-----------------^^E-----------------------^  |
+            # ^F-----------------------------------------------^
+            #   A: 当左花括号右边不是 `mask_holder_\d+}` 时继续
+            #   B: 当匹配到 `{mask_holder_\d+}` 时继续
+            #   C: 或者当匹配到非 `}` 时继续 (包括: 遇到换行符, 也继续)
+            #   F: 非贪婪地匹配, 直到遇到了不符合 B, C 情形的右花括号结束
+        ), cmd='strip_linebreaks')
+    
+        return mask.plain_text
+
+    @staticmethod
+    def _build_source_tree(code_lines: list) -> Hint.SourceTree:
+        virtual_root_node = {  # type: Hint.Node
             'lineno'  : '',
             'level'   : -4,  # abbreviation: lv
             'parent'  : None,
@@ -119,19 +180,36 @@ class AST:
             
             last_lv = curr_lv
         
-        out = virtual_root_node['children']  # type: Hint.AstTree
+        out = virtual_root_node['children']  # type: Hint.SourceTree
         return out
     
     @staticmethod
-    def _build_flat_tree(tree):
+    def _build_source_map(tree: Hint.SourceTree):
         out = {}
         
-        def _recurse(subtree: Hint.AstTree):
+        def _recurse(subtree: Hint.SourceTree):
             for lineno, node in subtree.items():
                 out[lineno] = node
                 _recurse(node['children'])
         
         _recurse(tree)
+        return out
+    
+    @staticmethod
+    def _build_source_chain(tree: Hint.SourceTree):
+        from collections import defaultdict
+        holder = defaultdict(list)
+        
+        def _recurse(subtree: Hint.SourceTree):
+            for lineno, node in subtree.items():
+                holder[node['level']].append(node)
+                _recurse(node['children'])
+        
+        _recurse(tree)
+
+        out = []
+        for k in sorted(holder.keys()):
+            out.append(holder[k])
         return out
     
     def get_compdef_blocks(self):
@@ -143,165 +221,21 @@ class AST:
         :return:
         """
         out = []
-        for no, node in self._tree.items():
+        for no, node in self.source_tree.items():
             assert node['level'] == 0
             if node['line_stripped'].startswith('comp '):
                 out.append(node)
         return out
     
     @staticmethod
-    def output_plain_text_from_struct(struct: Hint.AstNode):
+    def output_plain_text_from_struct(struct: Hint.Node):
         """ 将 struct 转换为纯字符串. 与 self._build_tree() 的过程相反. """
         out = [struct['line']]
         
-        def _recurse(subtree: Hint.AstTree):
+        def _recurse(subtree: Hint.SourceTree):
             for no, node in subtree.items():
                 out.append(node['line'])
                 _recurse(node['children'])
         
         _recurse(struct['children'])
         return '\n'.join(out)
-
-
-class PymlAst(AST):  # DELETE ME or UPDATE
-    
-    def __init__(self, pyml_text: str):
-        super().__init__(pyml_text)
-        self._update_tree()
-
-    def _update_tree(self):
-        """
-        在 Hint.AstNode 中增加以下信息:
-            {
-                ...
-                'node_type': /str
-                    'import',
-                    'comp_def',
-                    'comp_instance',
-                    'prop_assign',
-                    'on_signal',
-                    'pseudo_field',
-                    'class_def',
-                    'func_def',
-                /,
-            }
-        
-        :return:
-        """
-        
-        def _recurse(tree: Hint.AstTree):
-            for node in tree.values():
-                ln = node['line_stripped']
-                if ln.startswith(('import ', 'from ')):
-                    node['node_type'] = 'import'
-                elif ln.startswith('comp '):
-                    node['node_type'] = 'comp_def'
-                elif ln.startswith('on_'):
-                    node['node_type'] = 'on_signal'
-                elif ln.startswith('<') and ln.endswith('>'):
-                    node['node_type'] = 'pseudo_field'
-                elif ln.startswith('class '):
-                    node['node_type'] = 'class_def'
-                elif ln.startswith('def '):
-                    node['node_type'] = 'func_def'
-                elif self._is_component_name(ln):
-                    node['node_type'] = 'comp_instance'
-                else:
-                    node['node_type'] = 'prop_assigns'
-                _recurse(node['children'])
-                
-        _recurse(self._tree)
-
-    @staticmethod
-    def _is_component_name(name) -> bool:
-        """ 这是一个临时的方案, 用于判断 name 是否为组件命名格式: 如果是, 则认为
-            它是组件; 否则不是组件.
-
-        WARNING: 该方法仅通过命名格式来判断, 不具有可靠性! 未来会通过分析 import
-            命名空间来判断.
-
-        :param name: 请传入 node['line_stripped'] <- node: CompAstHint.AstNode
-        :return:
-        """
-        pattern = re.compile(r'[A-Z]\w+')
-        return bool(pattern.match(name))
-
-
-'''
-class CompAst(AST):  # DELETE ME
-    
-    def __init__(self, pyml_text: str):
-        super().__init__(pyml_text)
-        self._lock_to_compdef_blocks()
-        self.ids = {}  # type: Hint.IDs
-    
-    def _lock_to_compdef_blocks(self):
-        """ Filter top level nodes and get only 'comp_def' nodes. """
-        
-        def _get_keyword(line):
-            # Take the first word as 'key'.
-            pattern = re.compile(r'\w+')
-            first_word = pattern.search(line).group()
-            return first_word
-        
-        new_tree = {}  # type: Hint.AstTree
-        for no, node in self._tree.items():
-            assert node['level'] == 0
-            if _get_keyword(node['line']) == 'comp':
-                node['field'] = 'comp_def'
-                new_tree[no] = node
-        self._tree = new_tree
-    
-    def _add_field_info(self):
-        
-        def _get_keyword(line):
-            # Take the first word as 'key'.
-            pattern = re.compile(r'\w+')
-            first_word = pattern.search(line).group()
-            return first_word
-        
-        def _is_qml_comp_name(name):
-            pattern = re.compile(r'[A-Z][a-zA-Z]+')
-            if pattern.search(name):
-                return True
-            else:
-                return False
-        
-        for node in self._tree.values():
-            parent_node = self._flat_tree[node['parent']]
-            if parent_node['field'] == 'comp_def':
-                node['field'] = 'comp_block'
-            keyword = _get_keyword(node['line'])
-            if _is_qml_comp_name(keyword):
-                node['field'] = 'comp_instance'
-            else:
-                pass
-    
-    def analyse_compdef_block(self):
-        self._global_scanning()
-        
-        for block in self._tree.values():
-            pass
-    
-    def _global_scanning(self):
-        """ 扫描 id. """
-        
-        def _recurse(children: Hint.AstNode):
-            for block in children:
-                
-                if block['type'] == 'comp_def':
-                    pattern = re.compile(r'(?<=@)\w+')
-                    if m := pattern.search(block['text']):
-                        self.ids[m.group()] = block
-                elif block['key'] == 'id':
-                    pattern = re.compile(r'')
-                    pass
-                
-                if 'children' in block:
-                    _recurse(block['children'].values())
-        
-        _recurse(self._tree.values())
-    
-    def _line_scanning(self):
-        pass
-'''

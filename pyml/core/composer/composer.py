@@ -97,7 +97,7 @@ class Composer:
 
 class ComponentComposer:
     
-    def __init__(self, pyml_text, comp_block: Hint.AstNode):
+    def __init__(self, pyml_text, comp_block: Hint.Node):
         self._pyml_text = pyml_text
         self._comp_block = comp_block  # a single comp block
         self._comp_block_tree = {comp_block['lineno']: comp_block}
@@ -134,7 +134,7 @@ class ComponentComposer:
                 _id = ''
             return _id
         
-        def _recurse(tree: Hint.AstTree, parent):
+        def _recurse(tree: Hint.SourceTree, parent):
             for node in tree.values():
                 if self._is_component_name(node['line_stripped']):
                     node['context'] = {
@@ -176,7 +176,7 @@ class ComponentComposer:
         """
         pattern = re.compile(r'<(\w+)>')
         
-        def _recurse(tree: Hint.AstTree):
+        def _recurse(tree: Hint.SourceTree):
             for node in tree.values():
                 ln = node['line_stripped']
                 if ln.startswith('comp '):
@@ -210,7 +210,7 @@ class ComponentComposer:
         """
         _temp_token = ''
         
-        def _recurse(tree: Hint.AstTree):
+        def _recurse(tree: Hint.SourceTree):
             nonlocal _temp_token
             
             for node in tree.values():
@@ -247,7 +247,7 @@ class ComponentComposer:
     
     _simple_num = 0  # see `self._register_id`
     
-    def _register_id(self, node: Hint.AstNode, comp_id=''):
+    def _register_id(self, node: Hint.Node, comp_id=''):
         if comp_id == '':
             self._simple_num += 1
             comp_id = f'id{self._simple_num}'
@@ -290,7 +290,7 @@ class ComponentComposer:
             'children', 'attr', 'style',
         )
         
-        def _recurse(tree: Hint.AstTree):
+        def _recurse(tree: Hint.SourceTree):
             for node in tree.values():
                 
                 if node['field'] in pseudo_fields:
@@ -329,7 +329,7 @@ class ComponentComposer:
                         其实应该取它的块结构. 所以下面我们就做这个工作.
                         """
                         
-                        def _recurse_expr_block(tree: Hint.AstTree):
+                        def _recurse_expr_block(tree: Hint.SourceTree):
                             nonlocal expr
                             for node in tree.values():
                                 expr += node['line'] + '\n'

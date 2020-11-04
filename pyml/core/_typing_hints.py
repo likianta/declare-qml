@@ -19,7 +19,7 @@ class AstHint:
     LineNo = str  # 之所以用 str, 是为了让 Python dict 在输出或读取 json 文件时
     #   键的类型一致 (用 int 作为键的话, json 文件中会转换成 str).
     """ -> 'line{num}' -> num: 从 0 开始数 """
-    AstNode = Dict[str, Union[str, int, Dict[str, Any]]]
+    Node = Dict[str, Union[str, int, Dict[str, Any]]]
     """ -> {
             'lineno': str 'line{num}',
             'line': str,  # 原始的行内容. 便于还原输出
@@ -27,15 +27,18 @@ class AstHint:
             'level': <int 0, 4, 8, ...>,
             'parent': str lineno,
             'children': {
-                lineno: AstNode,
+                lineno: Node,
                 ...
             },
             ...
         }
     """
-    AstNodeList = Union[List[AstNode], Iterable[AstNode]]
-    AstTree = Dict[LineNo, AstNode]
-    """ -> {str lineno: dict ast_tree_node, ...} """
+    NodeList = Union[List[Node], Iterable[Node]]
+    SourceTree = Dict[LineNo, Node]
+    """ -> {LineNo: Node, ...} """
+    SourceMap = Dict[LineNo, Node]  # SourceTree 是嵌套的, SourceMap 是单层的.
+    SourceChain = List[List[Node]]
+    """ -> [[Node, ...], ...] """
 
 
 class ComposerHint(RegexHint, AstHint):
