@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.3.0
+@Version  : 0.3.1
 @Created  : 2020-11-02
-@Updated  : 2020-11-04
+@Updated  : 2020-11-05
 @Desc     :
     表述:
         - no, lineno: 行号. 格式为 'line{num}'.
@@ -14,10 +14,11 @@
 """
 import re
 
-from pyml.core._typing_hints import ComposerHint as Hint
+from pyml.core._typing_hints import AstHint as Hint
 
 
-class PymlAst:
+class SourceAst:
+    """ Source code abstract syntax tree. """
     
     def __init__(self, pyml_code: str):
         """
@@ -211,6 +212,8 @@ class PymlAst:
         for k in sorted(holder.keys()):
             out.append(holder[k])
         return out
+
+    # --------------------------------------------------------------------------
     
     def get_compdef_blocks(self):
         """
@@ -239,3 +242,36 @@ class PymlAst:
         
         _recurse(struct['children'])
         return '\n'.join(out)
+
+
+class ReferenceAst:  # Note: no usage
+    
+    def __init__(self, tree: Hint.SourceTree):
+        self.tree = tree
+        
+    def scan(self):
+        pass
+
+    # noinspection PyMethodMayBeStatic
+    def _scan_external_references(self):
+        """ Scan `import...`, `from...` """
+        return {}
+    
+    def _scan_object_references(self):
+        out = {}
+        
+        def _recurse(subtree: Hint.SourceTree, holder: dict):
+            for lineno, node in subtree.items():
+                ln = node['line_stripped']
+                if ln.startswith(('class ', 'def ', 'comp ')):
+                    holder[lineno] = {k: v
+                                      for (k, v) in node.items()
+                                      if k != 'children'}
+                    subholder = holder['children'] = {}
+                    _recurse(node['children'], subholder)
+        
+        _recurse(self.tree, out)
+        return out
+    
+    def _scan_component_references(self):
+        pass
