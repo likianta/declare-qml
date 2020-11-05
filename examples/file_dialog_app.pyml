@@ -8,9 +8,9 @@ import pyml.qtquick.window
 
 
 comp MyWindow(Window): @win
-    _row_style = RowStyle()
-    file_ext = '.html'
-    file_dir: str
+    attr _row_style = RowStyle()
+    attr file_ext = '.html'
+    attr file_dir: str
 
     style:
         color: '#cccccc'
@@ -32,12 +32,12 @@ comp MyWindow(Window): @win
                     height: 'ifill'
             Button: @browse_btn
                 text: 'Browse'
-                on_clicked:
+                on_clicked :: win
                     if _dir := FileDialog(isfile=False, ext=file_ext):
                         win.file_dir = _dir
             Button: @run_btn
                 text: 'Run'
-                on_clicked:
+                on_clicked :: (win, progress)
                     if not exists(win.file_dir):
                         return
                     

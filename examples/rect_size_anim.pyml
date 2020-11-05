@@ -1,4 +1,5 @@
 import pyml.qtquick
+import pyml.qtquick.controls
 import pyml.qtquick.window
 
 
@@ -34,7 +35,7 @@ comp MyWindow(Window): @win
                         motion: Easing.OutQuart
         Button: @btn
             text: 'Animate Rectangle'
-            on_clicked:
+            on_clicked :: (rect)
                 rect.active = !rect.active
             style:
                 alignment: 'hcenter, bottom'

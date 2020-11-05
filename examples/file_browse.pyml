@@ -3,26 +3,26 @@ import pyml.qtquick.window
 
 
 comp MyWindow(Window): @win
-    <attr>
+    attr:
         pass
 
     Column:
-        <style>
+        style:
             size: 'ifill'
             spacing: 20
         FileBrowse:
             pass
         Rectangle: @rect
-            <style>
+            style:
                 pass
 
 
 comp FileBrowse(Row): @browse
-    <attr>
+    attr:
         text: ''
         path: ''
         placeholder: ''
-    <style>
+    style:
         hpadding: 10
         spacing: 10
         size: 'ifill'
@@ -31,7 +31,7 @@ comp FileBrowse(Row): @browse
     Text: @label
         text: root.text
     Field: @field
-        <style>
+        style:
             radius: 4
             anim:
                 PropertyAnimation:
@@ -45,7 +45,6 @@ comp FileBrowse(Row): @browse
         placeholder: root.placeholder
     Button: @btn
         text: 'Browse'
-        on_click(root.path):
+        on_click ::
             if path := FileDialog():
                 root.path = path
-

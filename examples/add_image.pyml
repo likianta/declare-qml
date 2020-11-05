@@ -13,11 +13,11 @@ comp Rectangle: @photo
         FileFilter only accepts the extensions defined in `__init__` method.
         """
 
-        def __init__(*ext):
+        def __init__(self, *ext):
             self.ext = tuple(ext)
             self.holder = set()
 
-        def update(files):
+        def update(self, files):
             files = set(filter(lambda f: f.endswith(self.ext), files))
             self.holder.update(files)
             return files
@@ -25,7 +25,7 @@ comp Rectangle: @photo
     style:
         pos: (20, 20)
         size: (w, 150)
-            w:
+            w :: (photo_image)
                 if (photo_image.w > 200):
                     return photo_image.w
                 else:
@@ -37,12 +37,12 @@ comp Rectangle: @photo
                 duration: 200
 
     Rectangle: @border
-        <style>:
+        style:
             color: 'white'
             pos: 'center'
         Image: @photo_image
             source: root.image_source
-            <style>:
+            style:
                 pos: 'center'
 
 

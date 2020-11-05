@@ -7,7 +7,7 @@ import pyml.qtquick.window
 
 
 comp Main(Window): @win
-    <attr>
+    attr:
         history: {}  # {str ipath: str opath, ...}
         input_path: ''
         output_path: ''
@@ -29,12 +29,12 @@ comp Main(Window): @win
                 on_text: win.reset(win)
             Button:
                 text: 'Browse'
-                on_clicked:
+                on_clicked :: win
                     if file := FileDialog():
                         win.input_path = file
             Button:
                 text: 'Run'
-                on_clicked:
+                on_clicked :: win
                     from os.path import exists
                     path = win.input_path
 
@@ -60,7 +60,7 @@ comp Main(Window): @win
             Button:
                 enabled: (win.output_path or win.input_path).endswith('.html')
                 text: 'Open'
-                on_clicked(win):
+                on_clicked :: win
                     from os import startfile
                     if path := win.output_path:
                         startfile(path)
