@@ -5,6 +5,8 @@
 @Updated : 2020-11-05
 @Version : 0.1.0
 @Desc    : Language oriented interpreter.
+
+    DELETE: This module is going to be removed.
     
     本模块用于将 pyml 语法转换为其他声明式 ui 的语法. 目前主要提供面向 qml 的转
     换. 例如:
@@ -15,7 +17,7 @@
                      | }
 """
 import re
-from pyml.core._typing_hints import ComposerHint as Hint
+from pyml.core._typing_hints import InterpreterHint as Hint
 
 
 class BaseInterpreter:
@@ -138,6 +140,9 @@ class QmlInterpreter(BaseInterpreter):
     oper: str
     expr: str
     
+    def __init__(self, ids, source_map, source_chain):
+        super().__init__(ids, source_map, source_chain)
+
     def main(self, prop: str, oper: str, expr: str, **kwargs):
         self.prop, self.oper, self.expr = prop, oper, expr
         

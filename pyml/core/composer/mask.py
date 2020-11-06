@@ -1,9 +1,9 @@
 """
-@Author   : Likianta (likianta@foxmail.com)
+@Author   : likianta (likianta@foxmail.com)
 @FileName : mask.py
 @Version  : 0.2.3
 @Created  : 2020-11-02
-@Updated  : 2020-11-03
+@Updated  : 2020-11-06
 @Desc     : 
 """
 import re
@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 from lk_logger import lk
 
-from pyml.core._typing_hints import ComposerHint as Hint
+from pyml.core._typing_hints import MaskHint as Hint
 
 
 class Mask:

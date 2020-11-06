@@ -1,35 +1,219 @@
 """
-@Author   : Likianta (likianta@foxmail.com)
-@FileName : composer.py
-@Version  : 0.3.0
-@Created  : 2020-11-02
+@Author   : likianta <likianta@foxmail.com>
+@FileName : pyml_interp.py
+@Version  : 0.1.0
+@Created  : 2020-11-06
 @Updated  : 2020-11-06
-@Desc     : DELETE: This module is going to be removed.
+@Desc     : PyML Interpreter based on PyML AST.
 """
 import re
 from collections import defaultdict
 
-from lk_logger import lk
-
+from pyml.core.composer.ast import SourceAst
 from pyml.core._typing_hints import InterpreterHint as Hint
 
 
-class PlainComposer:
+# noinspection PyMethodMayBeStatic
+class PymlInterpreter:
+    """
+    PyML 解释器基于抽象语法树进行解读, 阐述每个树节点的功能含义.
+    PyML 解释器仅负责解释和描述功能, 如何实现这些功能, 将由 PythonComposer 和
+    QmlComposer 负责.
     
-    def __init__(self):
-        self.lines = defaultdict(list)  # {source_lineno: lines, ...}
+    QA:
+        Q: 如何理解 PyML 只解释节点功能?
+        A: 假设有一段源代码 `comp A: @alpha`, PyML 解读为:
+                {
+                    'node_type': 'comp_def',
+                    'comp_name': 'A',
+                    'comp_parent_name': 'Item',
+                    'comp_id': 'alpha',
+                }
+            对于所有节点, PyML 都会给出该节点的全部信息, 以字典格式.
+            这些信息仅仅是字典, 并不能够执行 "生成一个名字为 A 的组件", "为组件
+            设置名为 'alpha' id" 等操作. 所以之后我们需要 PythonComposer 把后端
+            的功能以 Python 代码的形式生成:
+                class A(PymlCore):
+                    def __init__(self):
+                        super().__init__()
+                        self.id = 'alpha'
+                        self.comp_name = 'A'
+                        self.comp_parent_name = 'Item'
+                    ...
+            以及需要 QMLComposer 把前端的功能以 QML 代码的形式生成:
+                // A.qml
+                Item {
+                    id: alpha
+                    ...
+                }
+        Q: 为什么基于抽象语法树解读?
+        A: 抽象语法树的 source_tree, source_map, source_chain 数据在分析过程中很
+            有帮助; 直接分析源码 (str) 的话反而不方便.
+            您可以类比理解为 json 文件和 Python dict 的关系, 直接解析 json (str)
+            的话不方便, 将它转换为 dict 后对程序来说更易阅读.
+    """
     
-    def submit(self, node: Hint.Node):
-        self.lines[node['lineno']].append(node['line'])
+    def __init__(self, ast: SourceAst):
+        self.source_tree = ast.source_tree
+        self.source_map = ast.source_map
+        self.source_chain = ast.source_chain
+        
+        self.data = defaultdict(dict)
+        
+        self._context = ['top_module']  # type: Hint.Context
+        self._node = None  # type: Hint.Node
     
-    def export(self):
-        out = []
-        for lineno, lines in self.lines.items():
-            out.extend(lines)
-        return out
+    def _global_scanning(self):
+        pass
+    
+    def mainloop(self):
+        for lineno, node in self.source_tree.items():
+            self._node = node
+            
+            node_type = self._check_node_type()
+            if node_type == 'raw_pycode':
+                self.submit()
+            
+    def submit(self, include_subnodes=True):
+        self.data
+        
+    def _check_node_type(self):
+        """
+        
+        :return: <str 'raw_pycode'>
+        """
+        _temp_token = ''
+
+        ln = self._node['line_stripped']
+        
+        if self._context[-1] == 'top_module':
+            if not ln.startswith('comp '):
+                return 'raw_pycode'
+        
+        def _recurse(tree: Hint.SourceTree):
+            nonlocal _temp_token
+            
+            for node in tree.values():
+                ln = node['line_stripped']
+                # simple
+                if ln.startswith(('import ', 'from ')):
+                    node['node_type'] = 'import'
+                elif ln.startswith('comp '):
+                    node['node_type'] = 'comp_def'
+                elif ln.startswith('class '):
+                    node['node_type'] = 'class_def'
+                elif ln.startswith('def '):
+                    node['node_type'] = 'func_def'
+                # not stable
+                elif ln.startswith('<') and ln.endswith('>'):
+                    node['node_type'] = 'pseudo_field'
+                elif ln.startswith('on_'):
+                    node['node_type'] = 'on_signal'
+                # complex
+                elif ln.endswith('::'):
+                    node['node_type'] = 'prop_assigns'
+                    _temp_token = '::'
+                elif self._is_component_name(ln) and _temp_token == '':
+                    node['node_type'] = 'comp_instance'
+                else:
+                    node['node_type'] = 'prop_assigns'
+            
+                _recurse(node['children'])
+                _temp_token = ''
+    
+        _recurse(self._comp_block_tree)
+    
+    # --------------------------------------------------------------------------
+    
+    def main2(self, node):  # DEL
+        """
+
+        :param node:
+        :return: {
+                'type': str,
+                key: value,
+                ...
+                    -> key: based on which 'type' is
+                    -> value: <str, list, dict>
+            }
+        """
+        # self.node = node
+        if node['node_type'] == 'comp_def':
+            return self._dissolve_comp_def(node)
+        elif node['node_type'] == 'pseudo_field':
+            return {}
+        elif node['node_type'] == 'comp_instance':
+            return self._dissolve_comp_instance(node)
+        elif node['node_type'] == 'on_signal':
+            return self._dissolve_on_signal(node)
+        elif node['node_type'] == 'prop_assigns':
+            pass
+    
+    def _dissolve_prop_assigns(self, node):
+        pattern = re.compile(
+            r'(_*[a-z][.\w]*) *(<==>|<=>|==|<=|=>|:=|::|:|=) *(.*)'
+            # ^-------------^  ^---------------------------^  ^--^
+            #  property         operator                       expression
+            #                   注意: operator 的匹配符号的顺序必须是从长到短排
+        )
+        match = pattern.search(node['line_stripped'])
+        prop, oper, expr = \
+            match.group(1), match.group(2), match.group(3)
+        
+        # analyse expression
+        
+        return {
+            'type'      : 'prop_assign',
+            'property'  : prop,
+            'operator'  : oper,
+            'expression': '',
+            'ids'       : {
+            
+            }
+        }
+    
+    def _dissolve_on_signal(self, node):
+        pattern = re.compile(r'on_([^_]+)')
+        signal = pattern.search(node['line_stripped']).group(1)
+        return {
+            'type'         : 'on_signal',
+            'signal'       : signal,
+            'passive_voice': signal.endswith('ed')
+        }
+    
+    def _dissolve_comp_instance(self, node):
+        pattern = re.compile(r'\w+')
+        name = pattern.match(node['line_stripped']).group()
+        return {
+            'type'     : 'comp_instance',
+            'comp_name': name
+        }
+    
+    def _dissolve_comp_def(self, node):
+        """
+        E.g.
+            IN: comp Window: @win
+            OT: {
+                    'type': 'comp_def',
+                    'parent_comp_name': 'Window',
+                    'self_comp_name': 'Window',
+                    'id': 'win', ...
+                }
+        """
+        pattern = re.compile(r'comp +(\w+)\((\w+)\):|comp +(\w+):')
+        a, b, c = pattern.search(node['line_stripped'])
+        """
+            'comp MyWindow(Window):' -> a, b, c = 'MyWindow', 'Window', None
+            'comp Window:'           -> a, b, c = None, None, 'Window'
+        """
+        return {
+            'type'            : 'comp_def',
+            'parent_comp_name': a or c,
+            'self_comp_name'  : b or c,
+        }
 
 
-class ComponentComposer:
+class ComponentInterpreter:
     
     def __init__(self, comp_block: Hint.Node):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
@@ -44,7 +228,7 @@ class ComponentComposer:
     
     def _build_ids(self):
         """
-        
+
         :return: {
                 ...
                 'context': {
@@ -104,7 +288,7 @@ class ComponentComposer:
     
     def _build_fields(self):
         """
-        
+
         :return: {
                 'field': <'comp_def', 'comp_body', 'attr', 'style', 'children'>,
                 ...
@@ -128,7 +312,7 @@ class ComponentComposer:
     
     def _build_node_types(self):
         """
-        
+
         :return: {
                 'node_type': <
                     str
@@ -196,10 +380,10 @@ class ComponentComposer:
     def _is_component_name(name) -> bool:
         """ 这是一个临时的方案, 用于判断 name 是否为组件命名格式: 如果是, 则认为
             它是组件; 否则不是组件.
-        
+
         WARNING: 该方法仅通过命名格式来判断, 不具有可靠性! 未来会通过分析 import
             命名空间来判断.
-            
+
         :param name: 请传入 node['line_stripped'] <- node: CompAstHint.AstNode
         :return:
         """
@@ -225,7 +409,7 @@ class ComponentComposer:
             for no, node in subtree.items():
                 pyml_interp.main(node)
                 # TODO
-            
+        
         prop_assigns = self._extract_property_assignments()
     
     def _extract_property_assignments(self):
