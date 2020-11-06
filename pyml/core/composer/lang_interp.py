@@ -36,10 +36,22 @@ class BaseInterpreter:
     def main(self, node: Hint.Node) -> dict:
         raise NotImplementedError
 
-        
+
+# noinspection PyMethodMayBeStatic
 class PymlInterpreter(BaseInterpreter):
     
     def main(self, node):
+        """
+        
+        :param node:
+        :return: {
+                'type': str,
+                key: value,
+                ...
+                    -> key: based on which 'type' is
+                    -> value: <str, list, dict>
+            }
+        """
         # self.node = node
         if node['node_type'] == 'comp_def':
             return self._dissolve_comp_def(node)
@@ -76,8 +88,7 @@ class PymlInterpreter(BaseInterpreter):
             }
         }
 
-    @staticmethod
-    def _dissolve_on_signal(node):
+    def _dissolve_on_signal(self, node):
         pattern = re.compile(r'on_([^_]+)')
         signal = pattern.search(node['line_stripped']).group(1)
         return {
@@ -86,8 +97,7 @@ class PymlInterpreter(BaseInterpreter):
             'passive_voice': signal.endswith('ed')
         }
         
-    @staticmethod
-    def _dissolve_comp_instance(node):
+    def _dissolve_comp_instance(self, node):
         pattern = re.compile(r'\w+')
         name = pattern.match(node['line_stripped']).group()
         return {
@@ -95,8 +105,7 @@ class PymlInterpreter(BaseInterpreter):
             'comp_name': name
         }
 
-    @staticmethod
-    def _dissolve_comp_def(node):
+    def _dissolve_comp_def(self, node):
         """
         E.g.
             IN: comp Window: @win

@@ -21,7 +21,7 @@
     # pyml
     comp A:
         attr a: str
-        on_completed:
+        on_completed ::
             print(self.a is str)  # -> True
     
     ```
@@ -51,7 +51,7 @@
         height: 100  #    正确示范
     #   ^ 以空格作为缩进, 缩进量是 0, 4, 8, 12, ...
     
-        on_completed:
+        on_completed ::
             a = (12 + 
                  24) * 2
             #    ^ 括号内不需要遵守上述规则
@@ -82,7 +82,7 @@
    
     comp C:
         # right (2)
-        on_completed:
+        on_completed ::
             width, height = 200, 100
         
     ```
@@ -97,7 +97,7 @@
 import pyml.qtquick.window
 
 comp 123Window(Window): @win  # 1. QML 不允许数字开头的组件命名
-    width:
+    width :: height
         height ++  # 2. Python 不支持 `num++` 语法
         return height
 

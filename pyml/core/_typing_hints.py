@@ -1,5 +1,5 @@
 """
-@Author  : Likianta <likianta@foxmail.com>
+@Author  : likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
 @Updated : 2020-11-04
@@ -79,7 +79,3 @@ class ComposerHint(RegexHint, AstHint):
     """
     PropAssigns = Dict[str, Dict[str, Tuple[str, str]]]
     """ -> {comp_id: {prop: (operator, expression), ...}, ...} """
-
-
-# class NodeType:
-#     Import = str
