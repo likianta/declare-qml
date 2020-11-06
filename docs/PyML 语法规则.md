@@ -313,7 +313,7 @@ comp Text:
 comp Text:
     text: 'Default text'
     on_text ::
-        print('Text is changed! New text is: ' + self.text)
+        print('Text has changed! New text is: ' + self.text)
 ```
 
 特殊的附加属性有:

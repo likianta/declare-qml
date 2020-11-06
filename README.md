@@ -2,13 +2,11 @@
 
 PyML (Python Markup Language) 是 Python 版的 QML, 可在声明式 UI 中引用 Python 的模块.
 
-PyML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处.
+PyML 受 enaml 启发而诞生, 与 enaml 有诸多相似之处, 但它看起来更像 yaml 风格.
 
 PyML 糅合了 qml, enaml, kv lang 中的一些特色语法, 写出来的代码看起来长这样:
 
 **示例: 矩形缩放动画**
-
-![](gallery/pyml_intro.gif)
 
 ```pyml
 import pyml.qtquick
@@ -54,7 +52,7 @@ comp MyWindow(Window): @win  # 使用 `@win` 声明一个 id (`id: win` 同样�
                 text: 'Hello World'
             MouseArea:
                 size: 'fill'
-                on_clicked:
+                on_clicked ::
                     state = container.active = !container.active
                     print('{} animating'.format(
                         'Release' if state is True else 'Withdraw'
@@ -69,3 +67,5 @@ if __name__ == '__main__':
         app.start()
 
 ```
+
+![](gallery/pyml_intro.gif)

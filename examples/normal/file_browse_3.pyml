@@ -4,6 +4,7 @@ See "../gallery/file_dialog_app.png"
 from os.path import exists
 
 import pyml.qtquick
+import pyml.qtquick.controls
 import pyml.qtquick.window
 
 
@@ -32,7 +33,7 @@ comp MyWindow(Window): @win
                     height: 'ifill'
             Button: @browse_btn
                 text: 'Browse'
-                on_clicked :: win
+                on_clicked ::
                     if _dir := FileDialog(isfile=False, ext=file_ext):
                         win.file_dir = _dir
             Button: @run_btn

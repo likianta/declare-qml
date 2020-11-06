@@ -29,7 +29,7 @@ class PymlInterpreter:
                     'comp_parent_name': 'Item',
                     'comp_id': 'alpha',
                 }
-            对于所有节点, PyML 都会给出该节点的全部信息, 以字典格式.
+            对于所有节点, PyML 都会给出类似于这样的信息, 以字典格式呈现.
             这些信息仅仅是字典, 并不能够执行 "生成一个名字为 A 的组件", "为组件
             设置名为 'alpha' id" 等操作. 所以之后我们需要 PythonComposer 把后端
             的功能以 Python 代码的形式生成:
@@ -67,61 +67,43 @@ class PymlInterpreter:
         pass
     
     def mainloop(self):
+        ref_resolver = ReferenceResolver()
+        
         for lineno, node in self.source_tree.items():
             self._node = node
             
-            node_type = self._check_node_type()
+            node_type = self._check_node_type(top_module_only=True)
+            
             if node_type == 'raw_pycode':
                 self.submit()
             
     def submit(self, include_subnodes=True):
-        self.data
+        self.data[self._node['lineno']] = self._node['line']
         
-    def _check_node_type(self):
+        def _recurse(subtree: Hint.SourceTree):
+            for lineno, node in subtree.items():
+                self.data[lineno] = node['line']
+                _recurse(node['children'])
+        
+        if include_subnodes:
+            _recurse(self._node['children'])
+        
+    def _check_node_type(self, top_module_only=False) -> Hint.NodeType:
         """
         
         :return: <str 'raw_pycode'>
         """
-        _temp_token = ''
-
+        if top_module_only is False:
+            raise Exception('暂不支持对全部层级的节点做节点类型分析, 请将'
+                            '`top_module_only` 参数设为 True.')
+        
         ln = self._node['line_stripped']
-        
-        if self._context[-1] == 'top_module':
-            if not ln.startswith('comp '):
-                return 'raw_pycode'
-        
-        def _recurse(tree: Hint.SourceTree):
-            nonlocal _temp_token
-            
-            for node in tree.values():
-                ln = node['line_stripped']
-                # simple
-                if ln.startswith(('import ', 'from ')):
-                    node['node_type'] = 'import'
-                elif ln.startswith('comp '):
-                    node['node_type'] = 'comp_def'
-                elif ln.startswith('class '):
-                    node['node_type'] = 'class_def'
-                elif ln.startswith('def '):
-                    node['node_type'] = 'func_def'
-                # not stable
-                elif ln.startswith('<') and ln.endswith('>'):
-                    node['node_type'] = 'pseudo_field'
-                elif ln.startswith('on_'):
-                    node['node_type'] = 'on_signal'
-                # complex
-                elif ln.endswith('::'):
-                    node['node_type'] = 'prop_assigns'
-                    _temp_token = '::'
-                elif self._is_component_name(ln) and _temp_token == '':
-                    node['node_type'] = 'comp_instance'
-                else:
-                    node['node_type'] = 'prop_assigns'
-            
-                _recurse(node['children'])
-                _temp_token = ''
-    
-        _recurse(self._comp_block_tree)
+        if ln.startswith(('import ', 'from ')):
+            return 'import'
+        elif ln.startswith('comp '):
+            return 'comp_def'
+        else:
+            return 'raw_pycode'
     
     # --------------------------------------------------------------------------
     
@@ -478,3 +460,9 @@ class ComponentInterpreter:
         
         _recurse(self._comp_block['children'])
         return out
+
+
+class ReferenceResolver:
+    
+    def __init__(self):
+        pass

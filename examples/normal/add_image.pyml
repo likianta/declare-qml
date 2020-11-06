@@ -25,7 +25,7 @@ comp Rectangle: @photo
     style:
         pos: (20, 20)
         size: (w, 150)
-            w :: (photo_image)
+            w ::
                 if (photo_image.w > 200):
                     return photo_image.w
                 else:
@@ -33,7 +33,7 @@ comp Rectangle: @photo
         anim:
             PropertyAnimation: @selected
                 props:
-                    id.border.color: 'red'
+                    border.color: 'red'
                 duration: 200
 
     Rectangle: @border

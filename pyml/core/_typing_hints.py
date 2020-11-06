@@ -2,8 +2,8 @@
 @Author  : likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-04
-@Version : 0.2.3
+@Updated : 2020-11-06
+@Version : 0.3.1
 @Desc    :
 """
 from typing import *
@@ -48,29 +48,26 @@ class AstHint:
 
 class InterpreterHint(RegexHint, AstHint):
     """ -> {'mask_node_{num}': str source_pyml_text_snippet, ...} """
-    Field = str
-    """ -> <
-            'top_module',
-            'comp_block',
-            'func_block',
-            'inner_def_block',
-            'inner_class_block',
-            'pseudo_prop',
-            'cascading_prop',
-        >
-    """
+    Field = Literal[
+        'top_module',
+        'comp_block',
+        'func_block',
+        'class_block',
+        'inner_def_block',
+        'inner_class_block',
+        'pseudo_prop',
+        'cascading_prop',
+    ]
     Context = List[Field]
-    NodeType = str
-    """ -> <
-            'comp_def',
-            'comp_instance',
-            'comp_id',
-            'pseudo_attr_prop',
-            'pseudo_style_prop',
-            'pseudo_children_prop',
-            ...
-        >
-    """
+    NodeType = Literal[
+        'raw_pycode',
+        'comp_def',
+        'comp_instance',
+        'comp_id',
+        'pseudo_attr_prop',
+        'pseudo_style_prop',
+        'pseudo_children_prop',
+    ]
     InterpretedData = Dict[super().LineNo, Dict[str, Union[
         NodeType, str, int, dict
     ]]]
@@ -82,29 +79,7 @@ class InterpreterHint(RegexHint, AstHint):
         }
     """
     
-    Component = Dict[str, Union[str, Dict[str, Any]]]
-    """ -> {
-            'field': <str 'comp_def', 'comp_instance', 'attr_def',
-                      'prop_assign', 'py_expr'>,
-            'general_props': {
-                'id': <str 'root', 'win', 'rect', 'col', ...>,
-                'objectName': str,
-                'style': {
-                    'width': <int, str>,
-                    'height': <int, str>,
-                    'size': <tuple, list, str>,
-                    'pos': <tuple, list, str>,
-                    ...
-                },
-                'parent': component_id,
-                'children': [component_id, ...],
-            },
-            'specific_props': {
-                # depends on which filed it is
-            }
-        }
-    """
-    IDs = Dict[str, Component]
+    IDs = Dict[str, super().Node]
     """ -> {
             buitin_id: comp, auto_id: comp, custom_id: comp
                 -> buitin_id: 'root'
