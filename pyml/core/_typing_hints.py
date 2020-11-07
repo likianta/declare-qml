@@ -2,7 +2,7 @@
 @Author  : likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-06
+@Updated : 2020-11-08
 @Version : 0.3.1
 @Desc    :
 """
@@ -48,25 +48,26 @@ class AstHint:
 
 class InterpreterHint(RegexHint, AstHint):
     """ -> {'mask_node_{num}': str source_pyml_text_snippet, ...} """
-    Field = Literal[
-        'top_module',
+    CompProp = Literal[
+        'cascading_prop',
+        'class_block',
         'comp_block',
         'func_block',
-        'class_block',
-        'inner_def_block',
         'inner_class_block',
+        'inner_def_block',
         'pseudo_prop',
-        'cascading_prop',
+        'top_module',
     ]
-    Context = List[Field]
+    Context = List[CompProp]
     NodeType = Literal[
-        'raw_pycode',
         'comp_def',
-        'comp_instance',
         'comp_id',
+        'comp_instance',
+        'import',
         'pseudo_attr_prop',
-        'pseudo_style_prop',
         'pseudo_children_prop',
+        'pseudo_style_prop',
+        'raw_pycode',
     ]
     InterpretedData = Dict[super().LineNo, Dict[str, Union[
         NodeType, str, int, dict

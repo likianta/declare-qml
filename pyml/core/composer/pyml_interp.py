@@ -1,13 +1,15 @@
 """
 @Author   : likianta <likianta@foxmail.com>
 @FileName : pyml_interp.py
-@Version  : 0.1.0
+@Version  : 0.2.1
 @Created  : 2020-11-06
-@Updated  : 2020-11-06
+@Updated  : 2020-11-08
 @Desc     : PyML Interpreter based on PyML AST.
 """
 import re
 from collections import defaultdict
+
+from lk_logger import lk
 
 from pyml.core.composer.ast import SourceAst
 from pyml.core._typing_hints import InterpreterHint as Hint
@@ -18,7 +20,7 @@ class PymlInterpreter:
     """
     PyML 解释器基于抽象语法树进行解读, 阐述每个树节点的功能含义.
     PyML 解释器仅负责解释和描述功能, 如何实现这些功能, 将由 PythonComposer 和
-    QmlComposer 负责.
+    QmlComposer 决定.
     
     QA:
         Q: 如何理解 PyML 只解释节点功能?
@@ -30,9 +32,8 @@ class PymlInterpreter:
                     'comp_id': 'alpha',
                 }
             对于所有节点, PyML 都会给出类似于这样的信息, 以字典格式呈现.
-            这些信息仅仅是字典, 并不能够执行 "生成一个名字为 A 的组件", "为组件
-            设置名为 'alpha' id" 等操作. 所以之后我们需要 PythonComposer 把后端
-            的功能以 Python 代码的形式生成:
+            这些信息仅仅是字典, 并不能够真实的功能和样式. 所以之后我们需要:
+            1. PythonComposer 把后端的功能以 Python 代码的形式生成:
                 class A(PymlCore):
                     def __init__(self):
                         super().__init__()
@@ -40,7 +41,7 @@ class PymlInterpreter:
                         self.comp_name = 'A'
                         self.comp_parent_name = 'Item'
                     ...
-            以及需要 QMLComposer 把前端的功能以 QML 代码的形式生成:
+            2. QMLComposer 把前端的功能以 QML 代码的形式生成:
                 // A.qml
                 Item {
                     id: alpha
@@ -50,7 +51,7 @@ class PymlInterpreter:
         A: 抽象语法树的 source_tree, source_map, source_chain 数据在分析过程中很
             有帮助; 直接分析源码 (str) 的话反而不方便.
             您可以类比理解为 json 文件和 Python dict 的关系, 直接解析 json (str)
-            的话不方便, 将它转换为 dict 后对程序来说更易阅读.
+            的话不方便, 将它转换为 dict 后对程序来说更易做进一步处理.
     """
     
     def __init__(self, ast: SourceAst):
@@ -61,7 +62,7 @@ class PymlInterpreter:
         self.data = defaultdict(dict)
         
         self._context = ['top_module']  # type: Hint.Context
-        self._node = None  # type: Hint.Node
+        # self._node = None  # type: Hint.Node
     
     def _global_scanning(self):
         pass
@@ -70,15 +71,22 @@ class PymlInterpreter:
         ref_resolver = ReferenceResolver()
         
         for lineno, node in self.source_tree.items():
-            self._node = node
+            # self._node = node
             
-            node_type = self._check_node_type(top_module_only=True)
+            node_type, value = self._check_node_type(node, top_module_only=True)
             
+            # 判断顺序 (按编者习惯): 由易到难
             if node_type == 'raw_pycode':
-                self.submit()
+                self.submit(node)
+            elif node_type == 'import':
+                ref_resolver.analyse_import(value)
+            elif node_type == 'comp_def':
+                comp = ComponentInterpreter(node, ref_resolver)
+                comp.main()
+                pass
             
-    def submit(self, include_subnodes=True):
-        self.data[self._node['lineno']] = self._node['line']
+    def submit(self, node: Hint.Node, include_subnodes=True):
+        self.data[node['lineno']] = node['line']
         
         def _recurse(subtree: Hint.SourceTree):
             for lineno, node in subtree.items():
@@ -86,24 +94,44 @@ class PymlInterpreter:
                 _recurse(node['children'])
         
         if include_subnodes:
-            _recurse(self._node['children'])
+            _recurse(node['children'])
         
-    def _check_node_type(self, top_module_only=False) -> Hint.NodeType:
+    def _check_node_type(self, node: Hint.Node,
+                         top_module_only=False) -> Hint.NodeType:
         """
         
         :return: <str 'raw_pycode'>
         """
         if top_module_only is False:
-            raise Exception('暂不支持对全部层级的节点做节点类型分析, 请将'
+            raise Exception('暂不支持对任意层级的节点做节点类型分析, 请将'
                             '`top_module_only` 参数设为 True.')
-        
-        ln = self._node['line_stripped']
+
+        ln = node['line_stripped']
+
+        def _get_pyml_module():
+            return ln.split(' ')[1]
+            #   'import pyml.qtquick' -> 'pyml.qtquick'
+
+        def _get_comp_name():
+            pattern = re.compile(r'comp +(\w+)\((\w+)\):|comp +(\w+):')
+            """ 1. 'comp MyWindow(Window):' -> ('MyWindow', 'Window')
+                2. 'comp Window:' -> ('Window',)
+            """
+            a, b, c = pattern.search(ln)
+            """ 'comp MyWindow(Window):' -> a, b, c = 'MyWindow', 'Window', None
+                'comp Window:'           -> a, b, c = None, None, 'Window'
+            """
+            return a or c
+            
+        def _get_raw_line():
+            return node['line']
+            
         if ln.startswith(('import ', 'from ')):
-            return 'import'
+            return 'import', _get_pyml_module()
         elif ln.startswith('comp '):
-            return 'comp_def'
+            return 'comp_def', _get_comp_name()
         else:
-            return 'raw_pycode'
+            return 'raw_pycode', _get_raw_line()
     
     # --------------------------------------------------------------------------
     
@@ -195,14 +223,60 @@ class PymlInterpreter:
         }
 
 
-class ComponentInterpreter:
+class ReferenceResolver:
     
-    def __init__(self, comp_block: Hint.Node):
-        self.lines = defaultdict(list)  # {source_lineno: lines, ...}
+    def __init__(self):
+        from lk_utils.read_and_write import loads
+        self.all_modules = loads('../../data/pyml_import_namespaces.json')
+        self.imports = []
+        self.available_components = set()
+    
+    def analyse_import(self, module: str):
+        """
         
+        :param module: e.g. 'pyml.qtquick.controls'
+        :return:
+        """
+        if module.startswith('pyml'):
+            self.imports.insert(0, module)
+            self.available_components.update(
+                self.all_modules[module].keys()
+            )
+    
+    def get_comp_props(self, comp_name: str):
+        """
+        
+        :param comp_name: e.g. <'Rectangle', 'Text', 'Window', ...>
+        :return:
+        """
+        out = []
+        
+        def _recurse(module, comp_name):
+            node = self.all_modules[module][comp_name]  # type: dict
+            out.extend(node['props'])
+            if node['inherits']:
+                _recurse(module, node['inherits'])
+        
+        for m in self.imports:
+            if comp_name in self.all_modules[m]:
+                _recurse(m, comp_name)
+                break
+        else:
+            raise Exception
+        
+        return out
+        
+
+class ComponentInterpreter:
+    """ 一个 ComponentInterpreter 实例负责解析一个 Component Code Block. """
+    
+    def __init__(self, comp_block: Hint.Node, ref_resolver: ReferenceResolver):
+        self.lines = defaultdict(list)  # {source_lineno: lines, ...}
+        self._ref_resolver = ref_resolver
+
         self._comp_block = comp_block  # a single comp block
         self._comp_block_tree = {comp_block['lineno']: comp_block}
-        
+
         self.ids = {}  # type: Hint.IDs
         self._build_ids()  # `self._comp_block` and `self.ids` got updated
         self._build_fields()
@@ -375,24 +449,11 @@ class ComponentInterpreter:
     # --------------------------------------------------------------------------
     
     def main(self):
-        from pyml.core.composer.lang_interp import (
-            PymlInterpreter, PythonInterpreter, QmlInterpreter
-        )
-        
-        pyml_interp = PymlInterpreter()
-        python_interp = PythonInterpreter()
-        qml_interp = QmlInterpreter()
-        """ pyml_interp 将解释 pyml 语言 (特别是组件块) 的功能含义,
-            python_interp 和 qml_interp 负责将 pyml_interp 所阐述的功能具现化为
-            Python 和 QML 代码.
-        """
-        
-        def _recurse(subtree: Hint.SourceTree):
-            for no, node in subtree.items():
-                pyml_interp.main(node)
-                # TODO
-        
-        prop_assigns = self._extract_property_assignments()
+        # 逐节点解释
+        pass
+    
+    def _check_node_type(self, node: Hint.Node) -> Hint.CompProp:
+        pass
     
     def _extract_property_assignments(self):
         out = {}  # {parent_id: {property: (operator, raw_expression)}}
@@ -460,9 +521,3 @@ class ComponentInterpreter:
         
         _recurse(self._comp_block['children'])
         return out
-
-
-class ReferenceResolver:
-    
-    def __init__(self):
-        pass

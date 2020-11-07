@@ -1,9 +1,9 @@
 """
 @Author   : Likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.3.2
+@Version  : 0.3.3
 @Created  : 2020-11-02
-@Updated  : 2020-11-06
+@Updated  : 2020-11-08
 @Desc     :
     表述:
         - no, lineno: 行号. 格式为 'line{num}'.
@@ -175,36 +175,3 @@ class SourceAst:
         
         _recurse(struct['children'])
         return '\n'.join(out)
-
-
-class ReferenceAst:  # DELETE: no usage
-    
-    def __init__(self, tree: Hint.SourceTree):
-        self.tree = tree
-        
-    def scan(self):
-        pass
-
-    # noinspection PyMethodMayBeStatic
-    def _scan_external_references(self):
-        """ Scan `import...`, `from...` """
-        return {}
-    
-    def _scan_object_references(self):
-        out = {}
-        
-        def _recurse(subtree: Hint.SourceTree, holder: dict):
-            for lineno, node in subtree.items():
-                ln = node['line_stripped']
-                if ln.startswith(('class ', 'def ', 'comp ')):
-                    holder[lineno] = {k: v
-                                      for (k, v) in node.items()
-                                      if k != 'children'}
-                    subholder = holder['children'] = {}
-                    _recurse(node['children'], subholder)
-        
-        _recurse(self.tree, out)
-        return out
-    
-    def _scan_component_references(self):
-        pass
