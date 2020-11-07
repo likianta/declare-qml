@@ -10,7 +10,6 @@ PyML 糅合了 qml, enaml, kv lang 中的一些特色语法, 写出来的代码�
 
 ```pyml
 import pyml.qtquick
-import pyml.qtquick.controls
 import pyml.qtquick.window
 
 
