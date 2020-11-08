@@ -1,9 +1,9 @@
 """
 @Author   : likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.4.1
+@Version  : 0.4.2
 @Created  : 2020-11-02
-@Updated  : 2020-11-08
+@Updated  : 2020-11-09
 @Desc     :
 """
 import re
@@ -195,9 +195,9 @@ class ComponentAst:
             性信息.
         :return:
         """
-        root_id = self._gen_auto_id()
+        root_id = 'root'
         out_scaffold = {
-            'id': root_id,
+            'id': '',
             'lineno': '',
             'props': [],
             'context': {

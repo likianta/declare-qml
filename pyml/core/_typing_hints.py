@@ -2,8 +2,8 @@
 @Author  : likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-08
-@Version : 0.3.5
+@Updated : 2020-11-09
+@Version : 0.3.6
 @Desc    :
 """
 from typing import *
@@ -78,7 +78,9 @@ class RefHint:
     
 class CompAstHint(AstHint, RefHint):
     CompId = str
-    """ -> <'id1', 'id2', 'id3', ...> """
+    """ -> <'root', 'id1', 'id2', 'id3', ...>
+        'root' is the only special id that indicates to the root comp node.
+    """
     CompNode = Dict[str, Union[
         CompId, str, List[str],
         Dict[str, Union[CompId, List[CompId]]],
@@ -140,9 +142,9 @@ class InterpreterHint(RegexHint, CompAstHint):
         }
     """
     
-    IDs = Dict[str, super().SourceNode]
+    IDs = Dict[str, super().CompNode]
     """ -> {
-            buitin_id: comp, auto_id: comp, custom_id: comp
+            buitin_id: CompNode, auto_id: CompNode, custom_id: CompNode
                 -> buitin_id: 'root'
                 -> auto_id: 'id1', 'id2', 'id3', ...
                 -> custom_id: based on the source pyml code, notice that its

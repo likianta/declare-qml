@@ -1,9 +1,9 @@
 """
 @Author   : likianta <likianta@foxmail.com>
 @FileName : pyml_interp.py
-@Version  : 0.2.1
+@Version  : 0.2.2
 @Created  : 2020-11-06
-@Updated  : 2020-11-08
+@Updated  : 2020-11-09
 @Desc     : PyML Interpreter based on PyML AST.
 """
 import re
@@ -11,7 +11,6 @@ from collections import defaultdict
 
 from lk_logger import lk
 
-from pyml.core.composer.ast import SourceAst
 from pyml.core._typing_hints import InterpreterHint as Hint
 
 
@@ -54,10 +53,10 @@ class PymlInterpreter:
             的话不方便, 将它转换为 dict 后对程序来说更易做进一步处理.
     """
     
-    def __init__(self, ast: SourceAst):
-        self.source_tree = ast.source_tree
-        self.source_map = ast.source_map
-        self.source_chain = ast.source_chain
+    def __init__(self, source_tree, source_map, source_chain):
+        self.source_tree = source_tree
+        self.source_map = source_map
+        self.source_chain = source_chain
         
         self.data = defaultdict(dict)
         
@@ -81,10 +80,12 @@ class PymlInterpreter:
             elif node_type == 'import':
                 ref_resolver.analyse_import(value)
             elif node_type == 'comp_def':
-                comp = ComponentInterpreter(node, ref_resolver)
+                comp = ComponentInterpreter(
+                    node, self.source_map, self.source_chain, ref_resolver
+                )
                 comp.main()
                 pass
-            
+    
     def submit(self, node: Hint.SourceNode, include_subnodes=True):
         self.data[node['lineno']] = node['line']
         
@@ -95,7 +96,7 @@ class PymlInterpreter:
         
         if include_subnodes:
             _recurse(node['children'])
-        
+    
     def _check_node_type(self, node: Hint.SourceNode,
                          top_module_only=False) -> Hint.NodeType:
         """
@@ -105,13 +106,13 @@ class PymlInterpreter:
         if top_module_only is False:
             raise Exception('暂不支持对任意层级的节点做节点类型分析, 请将'
                             '`top_module_only` 参数设为 True.')
-
+        
         ln = node['line_stripped']
-
+        
         def _get_pyml_module():
             return ln.split(' ')[1]
             #   'import pyml.qtquick' -> 'pyml.qtquick'
-
+        
         def _get_comp_name():
             pattern = re.compile(r'comp +(\w+)\((\w+)\):|comp +(\w+):')
             """ 1. 'comp MyWindow(Window):' -> ('MyWindow', 'Window')
@@ -122,10 +123,10 @@ class PymlInterpreter:
                 'comp Window:'           -> a, b, c = None, None, 'Window'
             """
             return a or c
-            
+        
         def _get_raw_line():
             return node['line']
-            
+        
         if ln.startswith(('import ', 'from ')):
             return 'import', _get_pyml_module()
         elif ln.startswith('comp '):
@@ -134,8 +135,9 @@ class PymlInterpreter:
             return 'raw_pycode', _get_raw_line()
     
     # --------------------------------------------------------------------------
+    # DELETE BELOW
     
-    def main2(self, node):  # DEL
+    def main2(self, node):
         """
 
         :param node:
@@ -276,7 +278,7 @@ class ReferenceResolver:
                     'This component name not belongs to any standard pyml '
                     'module!', comp_name
                 )
-
+        
         out = []
         
         def _recurse(module, comp_name):
@@ -287,29 +289,38 @@ class ReferenceResolver:
         
         _recurse(module, comp_name)
         return out
-        
+
 
 class ComponentInterpreter:
     """ 一个 ComponentInterpreter 实例负责解析一个 Component Code Block. """
     
-    def __init__(self, comp_block: Hint.SourceNode,
+    def __init__(self,
+                 source_node: Hint.SourceNode,
+                 source_map: Hint.SourceMap,
+                 source_chain: Hint.SourceChain,
                  ref_resolver: ReferenceResolver):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
         self._ref_resolver = ref_resolver
-
-        self._comp_block = comp_block  # a single comp block
-        self._comp_block_tree = {comp_block['lineno']: comp_block}
+        
+        self.source_node = source_node  # a single comp block
+        self.source_tree = {source_node['lineno']: source_node}
+        self.source_map = source_map
+        self.source_chain = source_chain
         
         from pyml.core.composer.ast import ComponentAst
-        self._ast = ComponentAst(
-            self._comp_block_tree, ref_resolver.comp_namespace
+        ast = ComponentAst(
+            self.source_tree, ref_resolver.comp_namespace
         )
+        self.comp_tree = ast.comp_tree
+        self.comp_map = ast.comp_map
+        self.comp_chain = ast.comp_chain
         
         self.ids = {}  # type: Hint.IDs
         self._build_ids()
         self._build_fields()
         self._build_node_types()
     
+    # noinspection PyUnboundLocalVariable
     def _build_ids(self):
         """ 根据 self._ast 更新 self.ids.
         
@@ -338,51 +349,33 @@ class ComponentInterpreter:
                 }
             }
         """
+        # register builtin id
+        self._register_id('root', self.comp_map['root'])
         
-        # noinspection PyUnboundLocalVariable
-        def _custom_id(line: str):
-            # please pass node['line_stripped'] to the param
-            if ('@' in line) and \
-                    (match := re.compile(r'(?<= @)\w+').search(line)):
-                _id = match.group(0)
-            elif (line.startswith('id')) and \
-                    (match := re.compile(r'^id *: *(\w+)').search(line)):
-                _id = match.group(1)
+        # register auto ids
+        for comp_id, comp_node in self.comp_map.items():
+            self._register_id(comp_id, comp_node)
+        
+        # register custom ids
+        for comp_id, comp_node in self.comp_map.items():
+            lineno = comp_node['lineno']
+            source_node = self.source_map[lineno]
+            ln = source_node['line_stripped']
+            if ('@' in ln) and \
+                    (match := re.compile(r'(?<= @)\w+').search(ln)):
+                custom_id = match.group(0)
+                self._register_id(custom_id, comp_node)
             else:
-                _id = ''
-            return _id
-        
-        def _recurse(tree: Hint.SourceTree, parent):
-            for node in tree.values():
-                if self._is_component_name(node['line_stripped']):
-                    node['context'] = {
-                        'root'  : 'root',
-                        'parent': parent['context']['self'],
-                        'self'  : self._register_id(node),
-                    }
-                else:
-                    node['context'] = parent['context']
-                    
-                    # 位置写得有点分散, 待优化
-                    if _id := _custom_id(node['line_stripped']):
-                        self._register_id(parent, _id)
-                
-                _recurse(node['children'], node)
-        
-        # ----------------------------------------------------------------------
-        
-        self._comp_block.update({
-            'context': {
-                'root'  : 'root',
-                'parent': '',
-                'self'  : self._register_id(self._comp_block, 'root'),
-            }
-        })
-        # 位置写得有点分散, 待优化
-        if _id := _custom_id(self._comp_block['line_stripped']):
-            self._register_id(self._comp_block, _id)
-        
-        _recurse(self._comp_block['children'], self._comp_block)
+                for child_node in source_node['children'].values():
+                    ln = child_node['line_stripped']
+                    if (
+                            ln.startswith('id')
+                    ) and (
+                            match := re.compile(r'^id *: *(\w+)').search(ln)
+                    ):
+                        custom_id = match.group(1)
+                        self._register_id(custom_id, source_node)
+                        break
     
     def _build_fields(self):
         """
@@ -406,7 +399,7 @@ class ComponentInterpreter:
                 node['field'] = field
                 _recurse(node['children'])
         
-        _recurse(self._comp_block_tree)
+        _recurse(self.source_tree)
     
     def _build_node_types(self):
         """
@@ -459,20 +452,14 @@ class ComponentInterpreter:
                 _recurse(node['children'])
                 _temp_token = ''
         
-        _recurse(self._comp_block_tree)
+        _recurse(self.source_tree)
     
     # --------------------------------------------------------------------------
     
-    _simple_num = 0  # see `self._register_id`
-    
-    def _register_id(self, node: Hint.SourceNode, comp_id=''):
-        if comp_id == '':
-            self._simple_num += 1
-            comp_id = f'id{self._simple_num}'
-        # self.ids[comp_id] = node  # A
-        self.ids[comp_id] = node['lineno']  # B
+    def _register_id(self, comp_id: str, node: Hint.SourceNode):
+        self.ids[comp_id] = node  # A
+        # self.ids[comp_id] = node['lineno']  # B
         # setattr(self.ids, comp_id, node)
-        return comp_id
     
     @staticmethod
     def _is_component_name(name) -> bool:
@@ -561,5 +548,5 @@ class ComponentInterpreter:
                     x = out.setdefault(node['context']['self'], {})
                     x[prop] = (oper, expr)
         
-        _recurse(self._comp_block['children'])
+        _recurse(self.source_node['children'])
         return out

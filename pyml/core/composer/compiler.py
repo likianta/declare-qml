@@ -38,7 +38,9 @@ def compile_pyml_code(pyml_code: str):
     """
     src = optimize_source_code(pyml_code)  # src: source code (abbr)
     ast = SourceAst(src)
-    interp = PymlInterpreter(ast)
+    interp = PymlInterpreter(
+        ast.source_tree, ast.source_map, ast.source_chain
+    )
     
     # --------------------------------------------------------------------------
     
