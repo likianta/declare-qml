@@ -63,9 +63,6 @@ class PymlInterpreter:
         self._context = ['top_module']  # type: Hint.Context
         # self._node = None  # type: Hint.Node
     
-    def _global_scanning(self):
-        pass
-    
     def mainloop(self):
         ref_resolver = ReferenceResolver()
         
@@ -299,7 +296,8 @@ class ComponentInterpreter:
                  source_map: Hint.SourceMap,
                  source_chain: Hint.SourceChain,
                  ref_resolver: ReferenceResolver):
-        self.lines = defaultdict(list)  # {source_lineno: lines, ...}
+        self.lines = defaultdict(list)  # {source_lineno: lines, ...}  # DEL
+        self.data = defaultdict(dict)
         self._ref_resolver = ref_resolver
         
         self.source_node = source_node  # a single comp block
@@ -434,7 +432,7 @@ class ComponentInterpreter:
                 elif ln.endswith('::'):
                     node['node_type'] = 'prop_assigns'
                     _temp_token = '::'
-                elif self._is_component_name(ln) and _temp_token == '':
+                elif self._is_component(ln) and _temp_token == '':
                     node['node_type'] = 'comp_instance'
                 else:
                     node['node_type'] = 'prop_assigns'
@@ -451,29 +449,53 @@ class ComponentInterpreter:
         # self.ids[comp_id] = node['lineno']  # B
         # setattr(self.ids, comp_id, node)
     
-    @staticmethod
-    def _is_component_name(name) -> bool:
-        """ 这是一个临时的方案, 用于判断 name 是否为组件命名格式: 如果是, 则认为
-            它是组件; 否则不是组件.
-
-        WARNING: 该方法仅通过命名格式来判断, 不具有可靠性! 未来会通过分析 import
-            命名空间来判断.
-
-        :param name: 请传入 node['line_stripped'] <- node: CompAstHint.AstNode
-        :return:
-        """
-        pattern = re.compile(r'[A-Z]\w+')
-        return bool(pattern.match(name))
+    def _is_component(self, line: str) -> bool:
+        pattern = re.compile(r'[A-Z]\w*')
+        name = pattern.search(line).group()
+        return name in self._ref_resolver.comp_namespace
     
     # --------------------------------------------------------------------------
     
     def main(self):
         # 逐节点解释
-        pass
-    
-    def _check_node_type(self, node: Hint.SourceNode) -> Hint.CompProp:
-        pass
-    
+        focus_scope = []
+        
+        def _recurse(tree: Hint.SourceTree):
+            # nonlocal focus_scope
+            for lineno, node in tree.items():
+                ln = node['line_stripped']
+                
+                if ln.startswith('@'):
+                    focus_scope.append('decorator')
+                    if ln == '@staticmethod':
+                        focus_scope.append('staticmethod')
+                elif ln.startswith('def '):
+                    if 'staticmethod' in focus_scope:
+                        pass
+                    else:
+                        p = re.compile(r'def \w+\(self, .+')
+                        if not p.search(ln):
+                            raise Exception('You should pass self as the first '
+                                            'parameter', lineno)
+                elif ln.startswith('class '):
+                    focus_scope.append()
+                elif ln.startswith('comp '):
+                    pass
+                
+    def _submit(self, lineno, info):
+        self.data[lineno].update(info)
+        
+    @staticmethod
+    def _check_node_type(node: Hint.SourceNode) -> Hint.CompProp:
+        ln = node['line_stripped']
+        
+        if ln.startswith(('comp ', 'def ', 'class ')):
+            return 'block_header'
+        # elif ln.startswith('id:'):
+        #     return 'id'
+        else:
+            return 'prop_assign'
+        
     def _extract_property_assignments(self):
         out = {}  # {parent_id: {property: (operator, raw_expression)}}
         
