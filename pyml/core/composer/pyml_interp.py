@@ -322,31 +322,20 @@ class ComponentInterpreter:
     
     # noinspection PyUnboundLocalVariable
     def _build_ids(self):
-        """ 根据 self._ast 更新 self.ids.
+        """ 根据 self.comp_map 更新 self.ids.
         
-        self._ast.comp_map 是一种平面结构: `{id: comp_props}`. 它的 `id` 是自动
-        生成的, 与我们 pyml 源代码中声明的无关. 例如:
+        self.comp_map 是一种平面结构: `{id: comp_node}`. 它的 `id` 是自动生成的,
+        与我们 pyml 源代码中声明的无关. 例如:
             # pyml source code
             comp A: @a
                 pass
-        这里我们自定义的 id 是 'a', 但 self._ast.comp_map 对其标记的是一个自动生
-        成的 id (比如 'id1').
+        这里我们自定义的 id 是 'a', 但 self.comp_map 对其标记的是一个自动生成的
+        id (比如 'id1').
         本方法的目的是, 令 self.ids 同时记录这两套 id, 得到:
             self.ids = {
                 'root': SourceNode,
                 'id1': SourceNode,
                 'a': SourceNode,
-            }
-        另外, 在 SourceNode 节点中, 也加入这样的信息:
-            SourceNode: {
-                ...,
-                'context': {
-                    relative_id: absolute_id,
-                        -> relative_id: <'root', 'parent', 'self'>
-                        -> absolute_id: see `self.ids` dict
-                    custom_id: absolute_id,
-                    ...
-                }
             }
         """
         # register builtin id
@@ -360,16 +349,17 @@ class ComponentInterpreter:
         for comp_id, comp_node in self.comp_map.items():
             lineno = comp_node['lineno']
             source_node = self.source_map[lineno]
-            ln = source_node['line_stripped']
-            if ('@' in ln) and \
-                    (match := re.compile(r'(?<= @)\w+').search(ln)):
+            if (
+                    '@' in (ln := source_node['line_stripped'])
+            ) and (
+                    match := re.compile(r'(?<= @)\w+').search(ln)
+            ):
                 custom_id = match.group(0)
                 self._register_id(custom_id, comp_node)
             else:
                 for child_node in source_node['children'].values():
-                    ln = child_node['line_stripped']
                     if (
-                            ln.startswith('id')
+                            (ln := child_node['line_stripped']).startswith('id')
                     ) and (
                             match := re.compile(r'^id *: *(\w+)').search(ln)
                     ):
