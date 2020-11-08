@@ -227,9 +227,12 @@ class ReferenceResolver:
     
     def __init__(self):
         from lk_utils.read_and_write import loads
-        self.all_modules = loads('../../data/pyml_import_namespaces.json')
-        self.imports = []
-        self.available_components = set()
+        self.module_namespace = loads(  # type: Hint.ModuleNameSpace
+            '../../data/pyml_import_namespaces.json'
+        )
+        #   e.g. {'pyml.qtquick': {'Text': {'imp}}}
+        self.comp_namespace = {}  # type: Hint.CompNameSpace
+        self.imports = []  # DEL
     
     def analyse_import(self, module: str):
         """
@@ -238,63 +241,94 @@ class ReferenceResolver:
         :return:
         """
         if module.startswith('pyml'):
+            #   module: <str 'pyml.qtquick', 'pyml.qtquick.controls', ...>
             self.imports.insert(0, module)
-            self.available_components.update(
-                self.all_modules[module].keys()
+            
+            # scheme 1: just update the node references
+            self.comp_namespace.update(
+                self.module_namespace[module]
             )
+            
+            # # scheme 2: load the full comp props
+            # for comp_name, comp_info in self.module_namespace[module].items():
+            #     self.comp_namespace[comp_name] = {
+            #         'import': comp_info['import'],
+            #         'inherits': comp_info['inherits'],
+            #         'props': self.get_comp_props(comp_name, module)
+            #     }
+        else:
+            pass  # TODO: 分析从本地项目导入的模块是否包含自定义的组件命名空间
     
-    def get_comp_props(self, comp_name: str):
-        """
+    def get_comp_props(self, comp_name: str, module=''):
+        """ Get the full properties of this component.
         
         :param comp_name: e.g. <'Rectangle', 'Text', 'Window', ...>
+        :param module
         :return:
         """
+        if not module:
+            for m in self.imports:
+                if comp_name in self.module_namespace[m]:
+                    module = m
+                    break
+            else:
+                raise Exception(
+                    'This component name not belongs to any standard pyml '
+                    'module!', comp_name
+                )
+
         out = []
         
         def _recurse(module, comp_name):
-            node = self.all_modules[module][comp_name]  # type: dict
+            node = self.module_namespace[module][comp_name]  # type: dict
             out.extend(node['props'])
             if node['inherits']:
                 _recurse(module, node['inherits'])
         
-        for m in self.imports:
-            if comp_name in self.all_modules[m]:
-                _recurse(m, comp_name)
-                break
-        else:
-            raise Exception
-        
+        _recurse(module, comp_name)
         return out
         
 
 class ComponentInterpreter:
     """ 一个 ComponentInterpreter 实例负责解析一个 Component Code Block. """
     
-    def __init__(self, comp_block: Hint.SourceNode, ref_resolver: ReferenceResolver):
+    def __init__(self, comp_block: Hint.SourceNode,
+                 ref_resolver: ReferenceResolver):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
         self._ref_resolver = ref_resolver
 
         self._comp_block = comp_block  # a single comp block
         self._comp_block_tree = {comp_block['lineno']: comp_block}
-
+        
+        from pyml.core.composer.ast import ComponentAst
+        self._ast = ComponentAst(
+            self._comp_block_tree, ref_resolver.comp_namespace
+        )
+        
         self.ids = {}  # type: Hint.IDs
-        self._build_ids()  # `self._comp_block` and `self.ids` got updated
+        self._build_ids()
         self._build_fields()
         self._build_node_types()
     
     def _build_ids(self):
-        """ 识别组件块中的每一个组件节点, 为其创建一个组件 id, 并获取它的内建属
-            性信息, 最终形成这样的数据:
-                component_tree: {
-                    lineno: ComponentNode
-                        -> ComponentNode: {
-                            'id': []
-                        }
-                }
-            
-
-        :return: {
-                ...
+        """ 根据 self._ast 更新 self.ids.
+        
+        self._ast.comp_map 是一种平面结构: `{id: comp_props}`. 它的 `id` 是自动
+        生成的, 与我们 pyml 源代码中声明的无关. 例如:
+            # pyml source code
+            comp A: @a
+                pass
+        这里我们自定义的 id 是 'a', 但 self._ast.comp_map 对其标记的是一个自动生
+        成的 id (比如 'id1').
+        本方法的目的是, 令 self.ids 同时记录这两套 id, 得到:
+            self.ids = {
+                'root': SourceNode,
+                'id1': SourceNode,
+                'a': SourceNode,
+            }
+        另外, 在 SourceNode 节点中, 也加入这样的信息:
+            SourceNode: {
+                ...,
                 'context': {
                     relative_id: absolute_id,
                         -> relative_id: <'root', 'parent', 'self'>

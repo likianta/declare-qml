@@ -3,7 +3,7 @@
 @Module  : _typing_hints.py
 @Created : 2020-11-02
 @Updated : 2020-11-08
-@Version : 0.3.3
+@Version : 0.3.5
 @Desc    :
 """
 from typing import *
@@ -38,7 +38,6 @@ class AstHint:
             ...
         }
     """
-    NodeList = Union[List[SourceNode], Iterable[SourceNode]]
     SourceTree = Dict[LineNo, SourceNode]
     """ -> {LineNo: Node, ...} """
     SourceMap = Dict[LineNo, SourceNode]
@@ -46,9 +45,10 @@ class AstHint:
     SourceChain = List[List[SourceNode]]
     """ -> [[Node, ...], ...] """
     
-    
-class CompAstHint(AstHint):
+
+class RefHint:
     CompName = str
+    """ -> <'Text', 'Item', 'Rectangle', ...> """
     CompProps = Dict[str, Union[str, List[str]]]
     """ -> e.g. {
             'module': 'pyml.qtquick',
@@ -57,8 +57,26 @@ class CompAstHint(AstHint):
             'props': list the_full_props
         }
     """
-    NameSpace = Dict[CompName, CompProps]
+    CompNameSpace = Dict[CompName, Union[str, List[str]]]
+    """ -> see 'pyml/data/pyml_import_namespaces.json'
+        e.g. {
+            'Text': {
+                'import': 'pyml.qtquick',
+                'inherits': 'Item',
+                'props': [
+                    'font.bold',
+                    'font.family',
+                    'text',
+                    ...
+                ]
+            }
+        }
+    """
+    PymlModule = str
+    ModuleNameSpace = Dict[PymlModule, CompNameSpace]
     
+    
+class CompAstHint(AstHint, RefHint):
     CompId = str
     """ -> <'id1', 'id2', 'id3', ...> """
     CompNode = Dict[str, Union[
@@ -88,7 +106,7 @@ class CompAstHint(AstHint):
     CompChain = List[List[CompNode]]
 
 
-class InterpreterHint(RegexHint, AstHint):
+class InterpreterHint(RegexHint, CompAstHint):
     """ -> {'mask_node_{num}': str source_pyml_text_snippet, ...} """
     CompProp = Literal[
         'cascading_prop',

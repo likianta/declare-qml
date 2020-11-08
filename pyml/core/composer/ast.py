@@ -1,7 +1,7 @@
 """
 @Author   : likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.4.0
+@Version  : 0.4.1
 @Created  : 2020-11-02
 @Updated  : 2020-11-08
 @Desc     :
@@ -176,16 +176,17 @@ class ComponentAst:
     
     """
     
-    def __init__(self, comp_block: Hint.SourceTree, namespace: Hint.NameSpace):
+    def __init__(self, comp_block_tree: Hint.SourceTree,
+                 namespace: Hint.CompNameSpace):
         """
         
-        :param comp_block:
+        :param comp_block_tree:
         :param namespace:
         """
         self._idx = 0
         self._namespace = namespace
         
-        self.comp_tree = self._build_comp_tree(comp_block)
+        self.comp_tree = self._build_comp_tree(comp_block_tree)
         self.comp_map = self._build_comp_map(self.comp_tree)
         self.comp_chain = self._build_comp_chain(self.comp_tree)
     
@@ -197,6 +198,7 @@ class ComponentAst:
         root_id = self._gen_auto_id()
         out_scaffold = {
             'id': root_id,
+            'lineno': '',
             'props': [],
             'context': {
                 'root': root_id,
@@ -267,7 +269,7 @@ class ComponentAst:
             out.append(holder[k])
         return out
 
-    def _gen_auto_id(self):
+    def _gen_auto_id(self) -> Hint.CompId:
         self._idx += 1
         return f'id{self._idx}'
 
