@@ -19,7 +19,7 @@ class PlainComposer:
     def __init__(self):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
     
-    def submit(self, node: Hint.Node):
+    def submit(self, node: Hint.SourceNode):
         self.lines[node['lineno']].append(node['line'])
     
     def export(self):
@@ -31,7 +31,7 @@ class PlainComposer:
 
 class ComponentComposer:
     
-    def __init__(self, comp_block: Hint.Node):
+    def __init__(self, comp_block: Hint.SourceNode):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
         
         self._comp_block = comp_block  # a single comp block
@@ -183,7 +183,7 @@ class ComponentComposer:
     
     _simple_num = 0  # see `self._register_id`
     
-    def _register_id(self, node: Hint.Node, comp_id=''):
+    def _register_id(self, node: Hint.SourceNode, comp_id=''):
         if comp_id == '':
             self._simple_num += 1
             comp_id = f'id{self._simple_num}'

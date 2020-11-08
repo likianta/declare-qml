@@ -1,20 +1,15 @@
 """
-@Author   : Likianta (likianta@foxmail.com)
+@Author   : likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.3.3
+@Version  : 0.4.0
 @Created  : 2020-11-02
 @Updated  : 2020-11-08
 @Desc     :
-    表述:
-        - no, lineno: 行号. 格式为 'line{num}'.
-        - ln, line: 行内容.
-        - node: 节点, 组件节点. 见 Hint.AstNode
-        - block: 组件声明域, 组件块. 同 node.
-        - compdef: 组件声明域, 组件块. 同 node.
 """
 import re
+from collections import defaultdict
 
-from pyml.core._typing_hints import AstHint as Hint
+from pyml.core._typing_hints import CompAstHint as Hint
 
 
 class SourceAst:
@@ -32,7 +27,7 @@ class SourceAst:
 
     @staticmethod
     def _build_source_tree(code_lines: list) -> Hint.SourceTree:
-        virtual_root_node = {  # type: Hint.Node
+        virtual_root_node = {  # type: Hint.SourceNode
             'lineno'  : '',
             'level'   : -4,  # abbreviation: lv
             'parent'  : None,
@@ -131,7 +126,6 @@ class SourceAst:
     
     @staticmethod
     def _build_source_chain(tree: Hint.SourceTree):
-        from collections import defaultdict
         holder = defaultdict(list)
         
         def _recurse(subtree: Hint.SourceTree):
@@ -164,7 +158,7 @@ class SourceAst:
         return out
     
     @staticmethod
-    def output_plain_text_from_struct(struct: Hint.Node):
+    def output_plain_text_from_struct(struct: Hint.SourceNode):
         """ 将 struct 转换为纯字符串. 与 self._build_tree() 的过程相反. """
         out = [struct['line']]
         
@@ -175,3 +169,117 @@ class SourceAst:
         
         _recurse(struct['children'])
         return '\n'.join(out)
+
+
+class ComponentAst:
+    """
+    
+    """
+    
+    def __init__(self, comp_block: Hint.SourceTree, namespace: Hint.NameSpace):
+        """
+        
+        :param comp_block:
+        :param namespace:
+        """
+        self._idx = 0
+        self._namespace = namespace
+        
+        self.comp_tree = self._build_comp_tree(comp_block)
+        self.comp_map = self._build_comp_map(self.comp_tree)
+        self.comp_chain = self._build_comp_chain(self.comp_tree)
+    
+    def _build_comp_tree(self, root: Hint.SourceTree) -> Hint.CompTree:
+        """ 识别组件块中的每一个组件节点, 为其创建一个组件 id, 并获取它的内建属
+            性信息.
+        :return:
+        """
+        root_id = self._gen_auto_id()
+        out_scaffold = {
+            'id': root_id,
+            'props': [],
+            'context': {
+                'root': root_id,
+                'parent': '',
+                'self': root_id,
+                'children': []
+            },
+            'children': {}
+        }
+    
+        def _recurse(tree: Hint.SourceTree, parent):
+            for lineno, node in tree.items():
+                if comp_props := self._is_component(node['line_stripped']):
+                    comp_id = self._gen_auto_id()
+                    
+                    next_parent = parent['children'][comp_id] = {
+                        'id': comp_id,
+                        'lineno': lineno,
+                        'props': comp_props['props'],
+                        'context': {
+                            'root': root_id,
+                            'parent': parent['id'],
+                            'self': comp_id,
+                            'children': []
+                        },
+                        'children': {
+                        
+                        }
+                    }
+                    parent['context']['children'][comp_id] = next_parent
+                    
+                    next_tree = node['children']
+                    _recurse(next_tree, next_parent)
+        
+        _recurse(root, out_scaffold)
+        out = out_scaffold['children']
+        return out
+
+    @staticmethod
+    def _build_comp_map(tree: Hint.CompTree) -> Hint.CompMap:
+        out = {}
+        
+        def _recurse(subtree: Hint.CompTree):
+            for compid, node in subtree.items():
+                out[compid] = node
+                _recurse(node['children'])
+        
+        _recurse(tree)
+        return out
+
+    @staticmethod
+    def _build_comp_chain(tree: Hint.CompTree) -> Hint.CompChain:
+        holder = defaultdict(list)
+        level = 0
+        
+        def _recurse(subtree: Hint.CompTree):
+            nonlocal level
+            level += 1
+            for compid, node in subtree.items():
+                holder[level].append(node)
+                _recurse(node['children'])
+            level -= 1
+        
+        _recurse(tree)
+        
+        out = []
+        for k in sorted(holder.keys()):
+            out.append(holder[k])
+        return out
+
+    def _gen_auto_id(self):
+        self._idx += 1
+        return f'id{self._idx}'
+
+    def _is_component(self, line: str) -> Hint.CompProps:
+        pattern = re.compile(r'^[A-Z]\w*([A-Z]\w*):|^([A-Z]\w*):')
+        #                               ^--------^   ^--------^
+        if match := pattern.search(line):
+            name = match.group(1) or match.group(2)
+            if name in self._namespace:
+                return self._namespace[name]
+            else:
+                raise Exception('Unknown component name which is unregistered '
+                                'in namespace', name)
+        else:
+            return None

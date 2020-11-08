@@ -3,7 +3,7 @@
 @Module  : _typing_hints.py
 @Created : 2020-11-02
 @Updated : 2020-11-08
-@Version : 0.3.1
+@Version : 0.3.3
 @Desc    :
 """
 from typing import *
@@ -24,7 +24,7 @@ class AstHint:
     LineNo = str  # 之所以用 str, 是为了让 Python dict 在输出或读取 json 文件时
     #   键的类型一致 (用 int 作为键的话, json 文件中会转换成 str).
     """ -> 'line{num}' -> num: 从 0 开始数 """
-    Node = Dict[str, Union[str, int, Dict[str, int, dict]]]
+    SourceNode = Dict[str, Union[str, int, Dict[str, int, dict]]]
     """ -> {
             'lineno': str 'line{num}',
             'line': str,  # 原始的行内容. 便于还原输出
@@ -38,12 +38,54 @@ class AstHint:
             ...
         }
     """
-    NodeList = Union[List[Node], Iterable[Node]]
-    SourceTree = Dict[LineNo, Node]
+    NodeList = Union[List[SourceNode], Iterable[SourceNode]]
+    SourceTree = Dict[LineNo, SourceNode]
     """ -> {LineNo: Node, ...} """
-    SourceMap = Dict[LineNo, Node]  # SourceTree 是嵌套的, SourceMap 是单层的.
-    SourceChain = List[List[Node]]
+    SourceMap = Dict[LineNo, SourceNode]
+    #   SourceTree 是嵌套的, SourceMap 是单层的.
+    SourceChain = List[List[SourceNode]]
     """ -> [[Node, ...], ...] """
+    
+    
+class CompAstHint(AstHint):
+    CompName = str
+    CompProps = Dict[str, Union[str, List[str]]]
+    """ -> e.g. {
+            'module': 'pyml.qtquick',
+            'name': 'Text',
+            'inherits': 'Item',
+            'props': list the_full_props
+        }
+    """
+    NameSpace = Dict[CompName, CompProps]
+    
+    CompId = str
+    """ -> <'id1', 'id2', 'id3', ...> """
+    CompNode = Dict[str, Union[
+        CompId, str, List[str],
+        Dict[str, Union[CompId, List[CompId]]],
+        Dict[CompId, dict],
+    ]]
+    """ -> {
+            'id': CompId,
+            'lineno': str,
+            'props': [str, ...],
+            'on_props': [str, ...],
+            'context': {
+                'root': CompId,
+                'parent': CompId,
+                'self': CompId,
+                'children': [CompId, ...]
+            },
+            'children': {
+                CompId: CompNode,
+                ...
+            }
+        }
+    """
+    CompTree = Dict[CompId, CompNode]
+    CompMap = Dict[CompId, CompNode]
+    CompChain = List[List[CompNode]]
 
 
 class InterpreterHint(RegexHint, AstHint):
@@ -80,7 +122,7 @@ class InterpreterHint(RegexHint, AstHint):
         }
     """
     
-    IDs = Dict[str, super().Node]
+    IDs = Dict[str, super().SourceNode]
     """ -> {
             buitin_id: comp, auto_id: comp, custom_id: comp
                 -> buitin_id: 'root'

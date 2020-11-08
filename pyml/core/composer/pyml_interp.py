@@ -85,7 +85,7 @@ class PymlInterpreter:
                 comp.main()
                 pass
             
-    def submit(self, node: Hint.Node, include_subnodes=True):
+    def submit(self, node: Hint.SourceNode, include_subnodes=True):
         self.data[node['lineno']] = node['line']
         
         def _recurse(subtree: Hint.SourceTree):
@@ -96,7 +96,7 @@ class PymlInterpreter:
         if include_subnodes:
             _recurse(node['children'])
         
-    def _check_node_type(self, node: Hint.Node,
+    def _check_node_type(self, node: Hint.SourceNode,
                          top_module_only=False) -> Hint.NodeType:
         """
         
@@ -270,7 +270,7 @@ class ReferenceResolver:
 class ComponentInterpreter:
     """ 一个 ComponentInterpreter 实例负责解析一个 Component Code Block. """
     
-    def __init__(self, comp_block: Hint.Node, ref_resolver: ReferenceResolver):
+    def __init__(self, comp_block: Hint.SourceNode, ref_resolver: ReferenceResolver):
         self.lines = defaultdict(list)  # {source_lineno: lines, ...}
         self._ref_resolver = ref_resolver
 
@@ -283,7 +283,15 @@ class ComponentInterpreter:
         self._build_node_types()
     
     def _build_ids(self):
-        """
+        """ 识别组件块中的每一个组件节点, 为其创建一个组件 id, 并获取它的内建属
+            性信息, 最终形成这样的数据:
+                component_tree: {
+                    lineno: ComponentNode
+                        -> ComponentNode: {
+                            'id': []
+                        }
+                }
+            
 
         :return: {
                 ...
@@ -423,7 +431,7 @@ class ComponentInterpreter:
     
     _simple_num = 0  # see `self._register_id`
     
-    def _register_id(self, node: Hint.Node, comp_id=''):
+    def _register_id(self, node: Hint.SourceNode, comp_id=''):
         if comp_id == '':
             self._simple_num += 1
             comp_id = f'id{self._simple_num}'
@@ -452,7 +460,7 @@ class ComponentInterpreter:
         # 逐节点解释
         pass
     
-    def _check_node_type(self, node: Hint.Node) -> Hint.CompProp:
+    def _check_node_type(self, node: Hint.SourceNode) -> Hint.CompProp:
         pass
     
     def _extract_property_assignments(self):

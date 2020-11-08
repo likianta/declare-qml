@@ -24,7 +24,7 @@ class BaseInterpreter:
     code: list
     ids: Hint.IDs
     info: dict
-    node: Hint.Node
+    node: Hint.SourceNode
     source_chain: Hint.SourceChain
     source_map: Hint.SourceMap
     
@@ -35,7 +35,7 @@ class BaseInterpreter:
         self.code = []
         self.info = {}
         
-    def main(self, node: Hint.Node) -> dict:
+    def main(self, node: Hint.SourceNode) -> dict:
         raise NotImplementedError
 
 
