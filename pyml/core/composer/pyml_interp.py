@@ -31,7 +31,7 @@ class PymlInterpreter:
                     'comp_id': 'alpha',
                 }
             对于所有节点, PyML 都会给出类似于这样的信息, 以字典格式呈现.
-            这些信息仅仅是字典, 并不能够真实的功能和样式. 所以之后我们需要:
+            这些信息仅仅是字典, 并不能够实现真实的功能和样式. 所以之后我们需要:
             1. PythonComposer 把后端的功能以 Python 代码的形式生成:
                 class A(PymlCore):
                     def __init__(self):
@@ -61,14 +61,11 @@ class PymlInterpreter:
         self.data = defaultdict(dict)
         
         self._context = ['top_module']  # type: Hint.Context
-        # self._node = None  # type: Hint.Node
     
     def mainloop(self):
         ref_resolver = ReferenceResolver()
         
         for lineno, node in self.source_tree.items():
-            # self._node = node
-            
             node_type, value = self._check_node_type(node, top_module_only=True)
             
             # 判断顺序 (按编者习惯): 由易到难
@@ -296,7 +293,6 @@ class ComponentInterpreter:
                  source_map: Hint.SourceMap,
                  source_chain: Hint.SourceChain,
                  ref_resolver: ReferenceResolver):
-        self.lines = defaultdict(list)  # {source_lineno: lines, ...}  # DEL
         self.data = defaultdict(dict)
         self._ref_resolver = ref_resolver
         
@@ -348,7 +344,13 @@ class ComponentInterpreter:
             lineno = comp_node['lineno']
             source_node = self.source_map[lineno]
             if (
-                    '@' in (ln := source_node['line_stripped'])
+                    '@' in (ln := source_node['line_stripped'][1:])
+                    #   为什么要用 `source_node['line_stripped'][1:]` (`[1:]` 是
+                    #   什么?) -- 为了避免和 Python 装饰器产生冲突:
+                    #       comp A: @a  # line[1:] = 'omp A: @a'
+                    #           @staticmethod  # line[1:] = 'staticmethod'
+                    #           def aaa():
+                    #               pass
             ) and (
                     match := re.compile(r'(?<= @)\w+').search(ln)
             ):
@@ -364,8 +366,15 @@ class ComponentInterpreter:
                         custom_id = match.group(1)
                         self._register_id(custom_id, source_node)
                         break
+                else:
+                    pass  # it means this component node has no custom id
+                    #   something like this:
+                    #       comp A:
+                    #           id: a  # component A does have custom id
+                    #           B:  # component B doesn't have custom id
+                    #               pass
     
-    def _build_fields(self):
+    def _build_fields(self):  # DELETE ME
         """
 
         :return: {
@@ -389,7 +398,7 @@ class ComponentInterpreter:
         
         _recurse(self.source_tree)
     
-    def _build_node_types(self):
+    def _build_node_types(self):  # DELETE ME
         """
 
         :return: {
@@ -481,10 +490,15 @@ class ComponentInterpreter:
                     focus_scope.append()
                 elif ln.startswith('comp '):
                     pass
-                
+    
+    def _swarm_decorator_block(self):
+        pass
+    
+    # --------------------------------------------------------------------------
+    
     def _submit(self, lineno, info):
         self.data[lineno].update(info)
-        
+    
     @staticmethod
     def _check_node_type(node: Hint.SourceNode) -> Hint.CompProp:
         ln = node['line_stripped']
@@ -495,7 +509,7 @@ class ComponentInterpreter:
         #     return 'id'
         else:
             return 'prop_assign'
-        
+    
     def _extract_property_assignments(self):
         out = {}  # {parent_id: {property: (operator, raw_expression)}}
         

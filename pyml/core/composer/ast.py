@@ -1,7 +1,7 @@
 """
 @Author   : likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.4.2
+@Version  : 0.4.3
 @Created  : 2020-11-02
 @Updated  : 2020-11-09
 @Desc     :
@@ -20,22 +20,22 @@ class SourceAst:
 
         :param source_code: from `Mask.get_plain_text(merge_block=True)`
         """
-        self.source_code = source_code
-        self.source_tree = self._build_source_tree(self.source_code.split('\n'))
+        # self.source_code = source_code
+        self.source_tree = self._build_source_tree(source_code.split('\n'))
         self.source_map = self._build_source_map(self.source_tree)
         self.source_chain = self._build_source_chain(self.source_tree)
 
     @staticmethod
     def _build_source_tree(code_lines: list) -> Hint.SourceTree:
-        virtual_root_node = {  # type: Hint.SourceNode
+        root_node_scaffold = {  # type: Hint.SourceNode
             'lineno'  : '',
             'level'   : -4,  # abbreviation: lv
             'parent'  : None,
             'children': {}
-            #           ^^ 这里才是我们最终要的结果, virtual_root_node 本身只是
+            #           ^^ 这里才是我们最终要的结果, root_node_scaffold 本身只是
             #              一个脚手架.
         }
-        node_chain = [virtual_root_node]
+        node_chain = [root_node_scaffold]
         """ How does node chain work?
 
             if curr_lv > last_lv:
@@ -95,9 +95,8 @@ class SourceAst:
             curr_node = node_chain[-1]['children'].setdefault(
                 f'line{curr_no}', {
                     'lineno'       : f'line{curr_no}',
-                    #   'lineno'  : curr_no,
-                    'line_stripped': curr_ln.strip(),
                     'line'         : curr_ln,
+                    'line_stripped': curr_ln.strip(),
                     'level'        : curr_lv,
                     'parent'       : node_chain[-1]['lineno'],
                     #   'parent'  : node_chain[-1],  # 未采用, 这样会导致输出
@@ -109,8 +108,8 @@ class SourceAst:
             
             last_lv = curr_lv
         
-        out = virtual_root_node['children']  # type: Hint.SourceTree
-        return out
+        root_node = root_node_scaffold['children']  # type: Hint.SourceTree
+        return root_node
     
     @staticmethod
     def _build_source_map(tree: Hint.SourceTree):
@@ -126,18 +125,18 @@ class SourceAst:
     
     @staticmethod
     def _build_source_chain(tree: Hint.SourceTree):
-        holder = defaultdict(list)
+        scaffold = defaultdict(list)
         
         def _recurse(subtree: Hint.SourceTree):
             for lineno, node in subtree.items():
-                holder[node['level']].append(node)
+                scaffold[node['level']].append(node)
                 _recurse(node['children'])
         
         _recurse(tree)
 
         out = []
-        for k in sorted(holder.keys()):
-            out.append(holder[k])
+        for k in sorted(scaffold.keys()):
+            out.append(scaffold[k])
         return out
 
     # --------------------------------------------------------------------------
@@ -196,7 +195,7 @@ class ComponentAst:
         :return:
         """
         root_id = 'root'
-        out_scaffold = {
+        root_node_scaffold = {
             'id': '',
             'lineno': '',
             'props': [],
@@ -233,9 +232,10 @@ class ComponentAst:
                     next_tree = node['children']
                     _recurse(next_tree, next_parent)
         
-        _recurse(root, out_scaffold)
-        out = out_scaffold['children']
-        return out
+        _recurse(root, root_node_scaffold)
+        
+        root_node = root_node_scaffold['children']
+        return root_node
 
     @staticmethod
     def _build_comp_map(tree: Hint.CompTree) -> Hint.CompMap:
@@ -251,22 +251,22 @@ class ComponentAst:
 
     @staticmethod
     def _build_comp_chain(tree: Hint.CompTree) -> Hint.CompChain:
-        holder = defaultdict(list)
+        scaffold = defaultdict(list)
         level = 0
         
         def _recurse(subtree: Hint.CompTree):
             nonlocal level
             level += 1
             for compid, node in subtree.items():
-                holder[level].append(node)
+                scaffold[level].append(node)
                 _recurse(node['children'])
             level -= 1
         
         _recurse(tree)
         
         out = []
-        for k in sorted(holder.keys()):
-            out.append(holder[k])
+        for k in sorted(scaffold.keys()):
+            out.append(scaffold[k])
         return out
 
     def _gen_auto_id(self) -> Hint.CompId:

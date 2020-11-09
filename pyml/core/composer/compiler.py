@@ -3,7 +3,7 @@
 @FileName : composer.py
 @Version  : 0.2.0
 @Created  : 2020-11-04
-@Updated  : 2020-11-06
+@Updated  : 2020-11-09
 @Desc     : 将 pyml 源码编译为 .py & .qml 代码.
     
     注: 请根据 'docs/PyML 实现流程.mm' 进行.
@@ -41,16 +41,6 @@ def compile_pyml_code(pyml_code: str):
     interp = PymlInterpreter(
         ast.source_tree, ast.source_map, ast.source_chain
     )
-    
-    # --------------------------------------------------------------------------
-    
-    # DEL
-    # lines_holder = {}
-    #
-    # lines_holder.update(
-    #     _compose_plain_code(ast.source_tree).lines
-    # )
-    # _compose_component_block(ast.source_tree)
 
 
 def optimize_source_code(source_code: str) -> str:
@@ -102,9 +92,9 @@ def optimize_source_code(source_code: str) -> str:
               cmd='circle+strip_linebreaks')
     mask.main(re.compile(r'{(?!mask_holder_\d+})(?:[^{]|\n)*?}'),
               cmd='circle+strip_linebreaks')
-    #    到这一步, 会出现 `{A, {mask1}, {mask2}, B}` 的情况, 我们需要把最外
+    #    到这一步, 会出现 `{A, {mask1}, {mask2}, B}` 的情况, 我们需要把最外边的
     #                      ^----------------------^
-    #    边的花括号也折叠.
+    #    花括号也折叠.
     mask.main(re.compile(
         r'{(?!mask_holder_\d+})(?:{mask_holder_\d+}|[^}])*?}'
         # ||  ^A-------------^||  ^B--------------^ ^C-^|  |
