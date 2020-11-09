@@ -2,8 +2,8 @@
 @Author  : likianta <likianta@foxmail.com>
 @Module  : _typing_hints.py
 @Created : 2020-11-02
-@Updated : 2020-11-09
-@Version : 0.3.6
+@Updated : 2020-11-10
+@Version : 0.4.0
 @Desc    :
 """
 from typing import *
@@ -20,11 +20,79 @@ class MaskHint(RegexHint):
     MaskHolder = Dict[str, PymlText]
 
 
-class AstHint:
+class TokenHint:  # comes from `Python39/Lib/token.py`
+    ENDMARKER = 0
+    NAME = 1
+    NUMBER = 2
+    STRING = 3
+    NEWLINE = 4
+    INDENT = 5
+    DEDENT = 6
+    LPAR = 7
+    RPAR = 8
+    LSQB = 9
+    RSQB = 10
+    COLON = 11
+    COMMA = 12
+    SEMI = 13
+    PLUS = 14
+    MINUS = 15
+    STAR = 16
+    SLASH = 17
+    VBAR = 18
+    AMPER = 19
+    LESS = 20
+    GREATER = 21
+    EQUAL = 22
+    DOT = 23
+    PERCENT = 24
+    LBRACE = 25
+    RBRACE = 26
+    EQEQUAL = 27
+    NOTEQUAL = 28
+    LESSEQUAL = 29
+    GREATEREQUAL = 30
+    TILDE = 31
+    CIRCUMFLEX = 32
+    LEFTSHIFT = 33
+    RIGHTSHIFT = 34
+    DOUBLESTAR = 35
+    PLUSEQUAL = 36
+    MINEQUAL = 37
+    STAREQUAL = 38
+    SLASHEQUAL = 39
+    PERCENTEQUAL = 40
+    AMPEREQUAL = 41
+    VBAREQUAL = 42
+    CIRCUMFLEXEQUAL = 43
+    LEFTSHIFTEQUAL = 44
+    RIGHTSHIFTEQUAL = 45
+    DOUBLESTAREQUAL = 46
+    DOUBLESLASH = 47
+    DOUBLESLASHEQUAL = 48
+    AT = 49
+    ATEQUAL = 50
+    RARROW = 51
+    ELLIPSIS = 52
+    COLONEQUAL = 53
+    OP = 54
+    AWAIT = 55
+    ASYNC = 56
+    TYPE_IGNORE = 57
+    TYPE_COMMENT = 58
+    ERRORTOKEN = 59
+    COMMENT = 60
+    NL = 61
+    ENCODING = 62
+    N_TOKENS = 63
+    NT_OFFSET = 256
+
+
+class AstHint(TokenHint):
     LineNo = str  # 之所以用 str, 是为了让 Python dict 在输出或读取 json 文件时
     #   键的类型一致 (用 int 作为键的话, json 文件中会转换成 str).
     """ -> 'line{num}' -> num: 从 0 开始数 """
-    SourceNode = Dict[str, Union[str, int, Dict[str, int, dict]]]
+    SourceNode = Dict[str, Union[str, int, Dict[str, Any]]]
     """ -> {
             'lineno': str 'line{num}',
             'line': str,  # 原始的行内容. 便于还原输出
@@ -44,7 +112,7 @@ class AstHint:
     #   SourceTree 是嵌套的, SourceMap 是单层的.
     SourceChain = List[List[SourceNode]]
     """ -> [[Node, ...], ...] """
-    
+
 
 class RefHint:
     CompName = str
@@ -74,8 +142,8 @@ class RefHint:
     """
     PymlModule = str
     ModuleNameSpace = Dict[PymlModule, CompNameSpace]
-    
-    
+
+
 class CompAstHint(AstHint, RefHint):
     CompId = str
     """ -> <'root', 'id1', 'id2', 'id3', ...>
@@ -131,7 +199,7 @@ class InterpreterHint(RegexHint, CompAstHint):
         'pseudo_style_prop',
         'raw_pycode',
     ]
-    InterpretedData = Dict[super().LineNo, Dict[str, Union[
+    InterpretedData = Dict[CompAstHint.LineNo, Dict[str, Union[
         NodeType, str, int, dict
     ]]]
     """ -> {
@@ -142,7 +210,7 @@ class InterpreterHint(RegexHint, CompAstHint):
         }
     """
     
-    IDs = Dict[str, super().CompNode]
+    IDs = Dict[str, CompAstHint.CompNode]
     """ -> {
             buitin_id: CompNode, auto_id: CompNode, custom_id: CompNode
                 -> buitin_id: 'root'

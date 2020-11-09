@@ -1,15 +1,58 @@
 """
 @Author   : likianta (likianta@foxmail.com)
 @FileName : ast.py
-@Version  : 0.4.3
+@Version  : 0.5.0
 @Created  : 2020-11-02
-@Updated  : 2020-11-09
+@Updated  : 2020-11-10
 @Desc     :
 """
 import re
 from collections import defaultdict
 
 from pyml.core._typing_hints import CompAstHint as Hint
+
+
+class SourceAst2:
+    
+    def __init__(self, pyml_file: str):
+        self.source_map = self._tokenize(pyml_file)
+        pass
+    
+    @staticmethod
+    def _tokenize(pyml_file: str):
+        import tokenize
+        from lk_utils.lk_logger import lk
+        
+        out = {}
+        
+        with tokenize.open(pyml_file) as file:
+            tokens = tokenize.generate_tokens(file.readline)
+            for token in tokens:
+                type_, name, start, end, line = token
+                
+                # exact type
+                if type_ == tokenize.OP:
+                    type_ = token.exact_type
+                
+                lineno = f'line{start[0]}'
+                if lineno not in out:
+                    out[lineno] = {
+                        'lineno': lineno,
+                        'line'  : line,
+                        'level' : 0 if type_ not in (
+                            Hint.INDENT, Hint.DEDENT
+                        ) else len(name),
+                        #   type_: 'INDENT' -> name: e.g. '    '
+                        'tokens': []
+                    }
+                out[lineno]['tokens'].append((name, type_))
+                
+                lk.logax(type_, name, start, end)
+        
+        # merge lines
+        pass
+        
+        return out
 
 
 class SourceAst:
@@ -24,7 +67,7 @@ class SourceAst:
         self.source_tree = self._build_source_tree(source_code.split('\n'))
         self.source_map = self._build_source_map(self.source_tree)
         self.source_chain = self._build_source_chain(self.source_tree)
-
+    
     @staticmethod
     def _build_source_tree(code_lines: list) -> Hint.SourceTree:
         root_node_scaffold = {  # type: Hint.SourceNode
@@ -133,12 +176,12 @@ class SourceAst:
                 _recurse(node['children'])
         
         _recurse(tree)
-
+        
         out = []
         for k in sorted(scaffold.keys()):
             out.append(scaffold[k])
         return out
-
+    
     # --------------------------------------------------------------------------
     
     def get_compdef_blocks(self):
@@ -196,31 +239,31 @@ class ComponentAst:
         """
         root_id = 'root'
         root_node_scaffold = {
-            'id': '',
-            'lineno': '',
-            'props': [],
-            'context': {
-                'root': root_id,
-                'parent': '',
-                'self': root_id,
+            'id'      : '',
+            'lineno'  : '',
+            'props'   : [],
+            'context' : {
+                'root'    : root_id,
+                'parent'  : '',
+                'self'    : root_id,
                 'children': []
             },
             'children': {}
         }
-    
+        
         def _recurse(tree: Hint.SourceTree, parent):
             for lineno, node in tree.items():
                 if comp_props := self._is_component(node['line_stripped']):
                     comp_id = self._gen_auto_id()
                     
                     next_parent = parent['children'][comp_id] = {
-                        'id': comp_id,
-                        'lineno': lineno,
-                        'props': comp_props['props'],
-                        'context': {
-                            'root': root_id,
-                            'parent': parent['id'],
-                            'self': comp_id,
+                        'id'      : comp_id,
+                        'lineno'  : lineno,
+                        'props'   : comp_props['props'],
+                        'context' : {
+                            'root'    : root_id,
+                            'parent'  : parent['id'],
+                            'self'    : comp_id,
                             'children': []
                         },
                         'children': {
@@ -236,7 +279,7 @@ class ComponentAst:
         
         root_node = root_node_scaffold['children']
         return root_node
-
+    
     @staticmethod
     def _build_comp_map(tree: Hint.CompTree) -> Hint.CompMap:
         out = {}
@@ -248,7 +291,7 @@ class ComponentAst:
         
         _recurse(tree)
         return out
-
+    
     @staticmethod
     def _build_comp_chain(tree: Hint.CompTree) -> Hint.CompChain:
         scaffold = defaultdict(list)
@@ -268,11 +311,11 @@ class ComponentAst:
         for k in sorted(scaffold.keys()):
             out.append(scaffold[k])
         return out
-
+    
     def _gen_auto_id(self) -> Hint.CompId:
         self._idx += 1
         return f'id{self._idx}'
-
+    
     def _is_component(self, line: str) -> Hint.CompProps:
         pattern = re.compile(r'^[A-Z]\w*([A-Z]\w*):|^([A-Z]\w*):')
         #                               ^--------^   ^--------^
