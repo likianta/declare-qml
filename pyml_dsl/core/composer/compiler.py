@@ -11,10 +11,10 @@
 """
 import re
 
-from pyml.core.composer.ast import SourceAst
-from pyml.core.composer.pyml_interp import PymlInterpreter
-from pyml.core.composer.composer import ComponentComposer, PlainComposer
-from pyml.core._typing_hints import InterpreterHint as Hint
+from pyml_dsl.core.composer.ast import SourceAst
+from pyml_dsl.core.composer.pyml_interp import PymlInterpreter
+from pyml_dsl.core.composer.composer import ComponentComposer, PlainComposer
+from pyml_dsl.core._typing_hints import InterpreterHint as Hint
 from lk_utils.read_and_write import read_file
 
 
@@ -66,7 +66,7 @@ def optimize_source_code(source_code: str) -> str:
     :ref: 'docs/掩码处理效果示例.md'
     :return:
     """
-    from pyml.core.composer.mask import Mask
+    from pyml_dsl.core.composer.mask import Mask
     mask = Mask(source_code)
     
     # 1. 将末尾以 \\ 换行的内容拼接回来.

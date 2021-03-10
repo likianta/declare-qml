@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from lk_logger import lk
 
-from pyml.core._typing_hints import InterpreterHint as Hint
+from pyml_dsl.core._typing_hints import InterpreterHint as Hint
 
 
 # noinspection PyMethodMayBeStatic
@@ -301,7 +301,7 @@ class ComponentInterpreter:
         self.source_map = source_map
         self.source_chain = source_chain
         
-        from pyml.core.composer.ast import ComponentAst
+        from pyml_dsl.core.composer.ast import ComponentAst
         ast = ComponentAst(
             self.source_tree, ref_resolver.comp_namespace
         )

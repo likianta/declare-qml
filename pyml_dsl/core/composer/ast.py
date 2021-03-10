@@ -9,7 +9,7 @@
 import re
 from collections import defaultdict
 
-from pyml.core._typing_hints import CompAstHint as Hint
+from pyml_dsl.core._typing_hints import CompAstHint as Hint
 
 
 class SourceAst2:
