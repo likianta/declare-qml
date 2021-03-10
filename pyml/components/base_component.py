@@ -24,21 +24,21 @@ class BaseComponent:
     _props: dict
     
     def __init__(self):
-        from pyml_pure_python.core.inspect import inspect
+        from pyml.core.inspect import inspect
         frame = _getframe(1)
         inspect.chfile(frame.f_code.co_filename)
         srcln = inspect.get_line(frame.f_lineno)
         spacing = len(srcln) - len(srcln.lstrip())
         level = int(spacing / 4)  # starts from 0
         
-        from pyml_pure_python.core import gen_id
+        from pyml.core import gen_id
         self.uid = gen_id(level)
         self.name = self.__class__.__name__
         self.level = level
         
         self.parent = None
         self.children = []
-
+        
         self._propagations = set()
         self._props = {'raw_props': [], 'custom_props': []}
         
@@ -110,8 +110,8 @@ class BaseComponent:
             #   2. update `context` surrounds `com`
             ...
         """
-        from pyml_pure_python.core import context
-        from pyml_pure_python.keywords import this
+        from pyml.core import context
+        from pyml.keywords import this
         
         # 此时的 this 代表的是上个组件 (上个组件指的可能是父组件, 兄弟组件或兄弟
         # 组件的子孙组件)
@@ -121,8 +121,8 @@ class BaseComponent:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        from pyml_pure_python.core import id_ref, id_gen
-        from pyml_pure_python.keywords import this, parent
+        from pyml.core import id_ref, id_gen
+        from pyml.keywords import this, parent
         
         this.point_to(id_ref[(pid := id_gen.get_parent_id(self.uid))])
         parent.point_to(id_ref[id_gen.get_parent_id(pid)])
@@ -157,10 +157,10 @@ class BaseComponent:
             }}
         ''')[1:].rstrip().format(
             id=self.uid,
-            object_name=self.name,
+            object_name=self.name + self.uid[3:],
             component=self.name,
-            properties=('\n    ').join(self.properties),
-            children=('\n\n    ').join(
+            properties='\n    '.join(self.properties),
+            children='\n\n    '.join(
                 x.build(4).lstrip() for x in self.children
             ) if self.children else '// NO CHILDREN'
         )
@@ -173,15 +173,19 @@ class BaseComponent:
         
         for k in self._props['raw_props']:
             v = getattr(self, k)
+            if isinstance(v, str):
+                v = f'"{v}"'
+            out.append(f'{name_2_camel_case(k)}: {v}')
             
-            if isinstance(v, BaseComponent):
-                out.append(v.build())
-            else:
-                out.append(f'{name_2_camel_case(k)}: {getattr(self, k)}')
+            # if isinstance(v, BaseComponent):
+            #     out.append(v.build())
+            # else:
+            #     out.append(f'{name_2_camel_case(k)}: {getattr(self, k)}')
         
         return out
 
 
 def name_2_camel_case(name: str):
+    # e.g. 'background_color' -> 'backgroundColor'
     segs = name.split('_')
     return segs[0] + ''.join(x.title() for x in segs[1:])

@@ -1,4 +1,4 @@
-from pyml_pure_python._typing_hint import *
+from pyml._typing_hint import *
 
 
 class StaticKeyword:
@@ -10,6 +10,9 @@ class StaticKeyword:
     def __str__(self):
         return self.text
     
+    def __repr__(self):
+        return str(self.value)
+
 
 class Final:
     

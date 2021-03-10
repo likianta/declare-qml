@@ -1,4 +1,4 @@
-from pyml_pure_python._typing_hint import *
+from pyml._typing_hint import *
 from .struct import StructEx
 
 
@@ -58,7 +58,7 @@ class Context:
 
         # ----------------------------------------------------------------------
 
-        from pyml_pure_python.core import id_ref, id_gen
+        from pyml.core import id_ref, id_gen
         this_com = id_ref[uid] = com
         parent_com = id_ref[id_gen.get_parent_id(uid)]
         
@@ -74,7 +74,7 @@ class Context:
         # except AttributeError:
         #     this_com, parent_com = com, None
         
-        from pyml_pure_python.keywords import this, parent
+        from pyml.keywords import this, parent
         this.point_to(this_com)
         parent.point_to(parent_com)
         return this, parent

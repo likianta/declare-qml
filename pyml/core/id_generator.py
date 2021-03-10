@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from pyml_pure_python._typing_hint import *
+from pyml._typing_hint import *
 
 
 class IDGenerator:
