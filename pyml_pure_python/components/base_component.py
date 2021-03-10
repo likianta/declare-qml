@@ -8,8 +8,6 @@ Notes:
 # noinspection PyProtectedMember
 from sys import _getframe
 
-from lk_logger import lk
-
 
 class BaseComponent:
     uid: str
@@ -17,8 +15,8 @@ class BaseComponent:
     level: int
     
     # parent, children 在 __enter__ 中才能确定
-    parent: object
-    children: list[object]
+    parent: ...  # TComponent
+    children: ...  # list[TComponent]
     
     _initialized = False
     _propagating = False
@@ -143,20 +141,35 @@ class BaseComponent:
         #     # getattr(parent.represents, 'uid')
         # )
     
-    def build(self):
-        from textwrap import dedent
-        return dedent('''
+    def build(self, offset=0):
+        from textwrap import indent, dedent
+        
+        qml_code = dedent('''
             {component} {{
-                {body}
+                id: {id}
+                objectName: "{object_name}"
+                
+                // properties
+                {properties}
+                
+                // children
+                {children}
             }}
-        '''.format(
+        ''')[1:].rstrip().format(
+            id=self.uid,
+            object_name=self.name,
             component=self.name,
-            body=('\n' + ' ' * 16).join(self.properties)
-        ))
+            properties=('\n    ').join(self.properties),
+            children=('\n\n    ').join(
+                x.build(4).lstrip() for x in self.children
+            ) if self.children else '// NO CHILDREN'
+        )
+        
+        return indent(qml_code, ' ' * offset)
     
     @property
     def properties(self):
-        out = [f'objectName: {self.name}']
+        out = []
         
         for k in self._props['raw_props']:
             v = getattr(self, k)

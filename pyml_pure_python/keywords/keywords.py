@@ -40,6 +40,10 @@ class DynamicKeyword:
     @property
     def represents(self) -> TRepresents:
         return self._real_ref
+    
+    @property
+    def uid(self):
+        return self._real_ref.uid
 
 
 class This(DynamicKeyword):

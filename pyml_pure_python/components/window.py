@@ -8,6 +8,6 @@ class Window(Item):
         super()._init_raw_props()
         self.color = '#ffffff'
         self.visile = true
-
+    
     def _init_custom_props(self):
         self.size = (0, 0)

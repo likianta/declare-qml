@@ -1,6 +1,6 @@
 from typing import *
 
-from .components.base_com import BaseComponent as TComponent
+from .components.base_component import BaseComponent as TComponent
 
 TComponentID = str  # e.g. 'com_0x1_01_01_01'.
 #   see `pyml_pure_python.core.id_gen.IDGenerator`

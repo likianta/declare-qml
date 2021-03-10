@@ -1,5 +1,5 @@
 from pyml_pure_python.keywords import true
-from .base_com import BaseComponent
+from .base_component import BaseComponent
 
 
 class Item(BaseComponent):
