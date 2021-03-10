@@ -1,5 +1,5 @@
 from pyml_pure_python.keywords import true
-from .base_comp import BaseComponent
+from .base_com import BaseComponent
 
 
 class Item(BaseComponent):
@@ -16,7 +16,7 @@ class Item(BaseComponent):
     
     def _init_custom_props(self):
         self.size = (0, 0)
-        
+    
     def on_size_changed(self, v):
         self.width, self.height = v
     

@@ -1,3 +1,6 @@
+from pyml_pure_python._typing_hint import *
+
+
 class StaticKeyword:
     
     def __init__(self, text, value):
@@ -15,13 +18,28 @@ class Final:
 
 
 class DynamicKeyword:
+    _initialized = False
     
     def __init__(self, name):
-        self.virtual_ref = name
-        self.real_ref = None
+        self._virtual_ref = name
+        self._real_ref = None  # type: TRepresents
+        self._initialized = True
     
-    def represents(self, obj):  # candidate: represents|point_to
-        self.real_ref = obj
+    def __setattr__(self, key, value):
+        if self._initialized:
+            if key not in self.__dict__:
+                if self._real_ref:
+                    self._real_ref.__setattr__(key, value)
+                return
+                # raise Exception(key, value)
+        super().__setattr__(key, value)
+
+    def point_to(self, com: TComponent):
+        self._real_ref = com
+
+    @property
+    def represents(self) -> TRepresents:
+        return self._real_ref
 
 
 class This(DynamicKeyword):
@@ -29,7 +47,11 @@ class This(DynamicKeyword):
     
     def __init__(self):
         super().__init__('this')
-        self.parent = Parent()
+    
+    @property
+    def parent(self) -> 'Parent':
+        global parent
+        return parent
     
     @property
     def siblings(self):
@@ -54,7 +76,14 @@ class Parent(DynamicKeyword):
     
     def __init__(self):
         super().__init__('parent')
-        self.children = []
+    
+    @property
+    def children(self) -> list[TComponent]:
+        # noinspection PyTypeChecker
+        return self.represents.children
+    
+    def append(self, com: TComponent):
+        self.children.append(com)
 
 
 # ------------------------------------------------------------------------------
@@ -64,9 +93,6 @@ false = StaticKeyword('false', False)
 null = StaticKeyword('null', None)
 
 this = This()
-parent = this.parent
-# last_sibling = this.last_sibling
-# next_sibling = this.next_sibling
-# siblings = this.siblings
+parent = Parent()
 
 final = Final

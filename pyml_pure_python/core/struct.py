@@ -22,14 +22,6 @@ class Struct:
                   note that the ancestor nodes also changed in this case
             }
         }
-        
-    Notes:
-        若您在源文档的节点内容中使用了 NodeNavigator._key_chain_joint 所定义的符
-        号, 请注意当您手动分割 NodeNavigator.key_chain 时, 该符号会加大风险.
-        您可以通过以下做法规避风险:
-            1. 只使用 NodeNavigator 提供的方法来获取 key_chain 中的 key (例如
-               NodeNavigator.walk())
-            2. 避免手动对 NodeNavigator.key_chain 进行 split 操作
     """
     default: dict
     
@@ -209,45 +201,13 @@ class StructEx(Struct):
     """
     
     def __init__(self, default, setin: str):
-        assert setin in default
+        assert setin in default and isinstance(default[setin], dict)
         self._setin = setin
         
         super().__init__(default)
         
         self._struct = {setin: {}}
         self._node = self._struct
-    
-    # # def insert_inside(self, key, **kwargs):
-    # #     self._last_last_last_node = self._last_last_node
-    # #     self._last_last_node = self._last_node
-    # #     self._last_node = self._node
-    # #
-    # #     default = deepcopy(self.default | kwargs)
-    # #     self._node = self._node[self._setin].setdefault(key, default)
-    # #
-    # #     self._key_chain.append(key)
-    # #
-    # #     return self._node
-    # #
-    # # def insert_beside(self, key, **kwargs):
-    # #     default = deepcopy(self.default | kwargs)
-    # #     self._node = self._last_node[self._setin].setdefault(key, default)
-    # #
-    # #     self._key_chain[-1] = key
-    # #
-    # #     return self._node
-    # #
-    # # def insert_ouside(self, key, **kwargs):
-    # #     default = deepcopy(self.default | kwargs)
-    # #     self._node = self._last_last_node[self._setin].setdefault(key, default)
-    # #
-    # #     self._last_node = self._last_last_node
-    # #     self._last_last_node = self._last_last_last_node
-    # #
-    # #     self._key_chain.pop()
-    # #     self._key_chain[-1] = key
-    # #
-    # #     return self._node
     
     def insert_inside(self, key, **kwargs):
         # pretend
@@ -258,6 +218,8 @@ class StructEx(Struct):
         
         # unpretend
         self._last_node = temp
+        
+        return self._node
     
     def insert_beside(self, key, **kwargs):
         # pretend
@@ -268,6 +230,8 @@ class StructEx(Struct):
         
         # unpretend
         self._last_node = temp
+        
+        return self._node
     
     def insert_ouside(self, key, **kwargs):
         # pretend
@@ -279,9 +243,11 @@ class StructEx(Struct):
         # unpretend
         self._last_last_node = temp
         self._last_node = self._last_last_node
+        
+        return self._node
     
     def walk(self):
-        raise NotImplementedError('NodeNavigatorEx.walk() is disabled!')
+        raise NotImplementedError('StructEx.walk() is disabled!')
     
     @property
     def struct(self):
