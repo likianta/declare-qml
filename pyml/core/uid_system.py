@@ -114,6 +114,9 @@ class UIDReferences:
     def __getitem__(self, item):
         return self.get(item)
     
+    def __setitem__(self, key, value):
+        self._ref[str(key)] = value
+    
 
 # ------------------------------------------------------------------------------
 
