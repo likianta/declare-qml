@@ -3,14 +3,13 @@ Notes:
     本模块在顶层不可以导入 `pyml_pure_python/core`, `pyml_pure_python/keywords`,
     `pyml_pure_python/_typing_hint.py`, 因为它们都直接或间接地依赖于本模块 (在顶
     层导入就构成了死循环)
-    
 """
 # noinspection PyProtectedMember
 from sys import _getframe
 
 
 class BaseComponent:
-    uid: str
+    uid: ...  # UID
     name: str
     level: int
     
@@ -121,25 +120,10 @@ class BaseComponent:
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
-        from pyml.core import id_ref, id_gen
+        from pyml.core import id_ref
         from pyml.keywords import this, parent
-        
-        this.point_to(id_ref[(pid := id_gen.get_parent_id(self.uid))])
-        parent.point_to(id_ref[id_gen.get_parent_id(pid)])
-        
-        # lk.loga(this.represents.uid, parent.represents.uid if parent else None)
-        # try:
-        #     grand_parent_com = parent.represents.parent
-        # except AttributeError:
-        #     grand_parent_com = None
-        # this.point_to(parent.represents)
-        # parent.point_to(grand_parent_com)
-        #
-        # lk.loga(
-        #     'now `this` indicates to parent container',
-        #     getattr(this.represents, 'uid'),
-        #     # getattr(parent.represents, 'uid')
-        # )
+        this.point_to(id_ref[(pid := self.uid.parent_id)])
+        parent.point_to(id_ref[pid.parent_id])
     
     def build(self, offset=0):
         from textwrap import indent, dedent
@@ -157,12 +141,12 @@ class BaseComponent:
             }}
         ''')[1:].rstrip().format(
             id=self.uid,
-            object_name=self.name + self.uid[3:],
+            object_name=self.name + str(self.uid)[3:],
             component=self.name,
             properties='\n    '.join(self.properties),
             children='\n\n    '.join(
                 x.build(4).lstrip() for x in self.children
-            ) if self.children else '// NO CHILDREN'
+            ) if self.children else '// NO CHILD'
         )
         
         return indent(qml_code, ' ' * offset)

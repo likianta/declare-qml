@@ -3,7 +3,7 @@ from collections import defaultdict
 from pyml._typing_hint import *
 
 
-class IDGenerator:
+class UIDGenerator:
     """
     ID 生成规则:
         1. 使用小写英文字母, 数字和下划线
@@ -12,7 +12,7 @@ class IDGenerator:
         4. 为避免与组件内部属性冲突, 以及保持一致性, 最好使用一个固定的开头
         5. 结合实际情况, 在理想的范围内提供理想的格式 (超出理想范围的极端情况,
            不强求格式美观)
-        
+
     根据以上规则指导, 目前确定的生成格式如下:
         com_{block}_{no_a}_{no_b}_{no_c}_...
             1. 以 'com' 开头
@@ -42,36 +42,65 @@ class IDGenerator:
         self._block_index += 1
         return hex(self._block_index)
     
-    @staticmethod
-    def get_layer_level(uid: str) -> int:
-        # e.g. 'com_0x1_01_02' -> ['com', '0x1', '01_02'] -> '01_02'
-        # -> count one underline(s)
-        return uid.split('_', 2)[-1].count('_')
+    # @staticmethod
+    # def get_layer_level(uid: str) -> int:
+    #     # e.g. 'com_0x1_01_02' -> ['com', '0x1', '01_02'] -> '01_02'
+    #     # -> count one underline(s)
+    #     return uid.split('_', 2)[-1].count('_')
+    #
+    # @staticmethod
+    # def get_parent_id(uid: TComponentID):
+    #     out = uid.rsplit('_', 1)[0]
+    #     if out.count('_') <= 1:
+    #         return ''
+    #     else:
+    #         return out
     
-    @staticmethod
-    def get_parent_id(uid: TComponentID):
-        out = uid.rsplit('_', 1)[0]
-        if out.count('_') <= 1:
-            return ''
-        else:
-            return out
-    
-    def main(self, layer_level: int):
+    def main(self, layer_level: int) -> 'UID':
         self._layer_level_2_com_no[layer_level] += 1
         
         if (a := layer_level) < (b := max(self._layer_level_2_com_no)):
             for i in range(a + 1, b + 1):
                 self._layer_level_2_com_no.pop(i)
         
-        return '{}_{}_{}'.format(
+        return UID('{}_{}_{}'.format(
             self.head,
             hex(self._block_index),
             '_'.join(map(lambda x: '{:0>2}'.format(x),
                          self._layer_level_2_com_no.values()))
-        )
+        ))
+
+
+class UID:
+    """
+    References:
+        'docs/设计思考 - UID 为什么要以 class 形式存在.md'
+    """
+    _uid: str
+    
+    def __init__(self, uid: str):
+        self._uid = uid
+    
+    def __str__(self):
+        return self._uid
+    
+    @property
+    def parent_id(self) -> Optional['UID']:
+        x = self._uid.rsplit('_', 1)[0]
+        if x.count('_') <= 1:
+            return None
+        else:
+            return UID(x)
+    
+    @property
+    def layer_level(self):
+        # e.g. 'com_0x1_01_02' -> ['com', '0x1', '01_02'] -> '01_02'
+        # -> count one underline(s)
+        return self._uid.split('_', 2)[-1].count('_')
 
 
 # ------------------------------------------------------------------------------
 
-id_gen = IDGenerator()
+id_ref = {None: None}
+id_gen = UIDGenerator()
 gen_id = id_gen.main
