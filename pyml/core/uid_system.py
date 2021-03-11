@@ -42,20 +42,6 @@ class UIDGenerator:
         self._block_index += 1
         return hex(self._block_index)
     
-    # @staticmethod
-    # def get_layer_level(uid: str) -> int:
-    #     # e.g. 'com_0x1_01_02' -> ['com', '0x1', '01_02'] -> '01_02'
-    #     # -> count one underline(s)
-    #     return uid.split('_', 2)[-1].count('_')
-    #
-    # @staticmethod
-    # def get_parent_id(uid: TComponentID):
-    #     out = uid.rsplit('_', 1)[0]
-    #     if out.count('_') <= 1:
-    #         return ''
-    #     else:
-    #         return out
-    
     def main(self, layer_level: int) -> 'UID':
         self._layer_level_2_com_no[layer_level] += 1
         
@@ -84,6 +70,14 @@ class UID:
     def __str__(self):
         return self._uid
     
+    def __eq__(self, other: TComponentID):
+        # https://zhuanlan.zhihu.com/p/37643853+&cd=1&hl=zh-CN&ct=clnk&gl=sg
+        # examples: pyml.core.property.Anchors.__str__
+        return self._uid == str(other)
+    
+    def __ne__(self, other: TComponentID):
+        return self._uid != str(other)
+    
     @property
     def parent_id(self) -> Optional['UID']:
         x = self._uid.rsplit('_', 1)[0]
@@ -101,7 +95,7 @@ class UID:
     
 class UIDReferences:
     
-    _ref = {}
+    _ref = {'None': None}
     
     def get(self, uid: Union[str, UID, None]):
         if uid is None:

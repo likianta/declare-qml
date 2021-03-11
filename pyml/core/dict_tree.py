@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 
-class Struct:
+class DictTree:
     """
     case:
         case1: insert_inside
@@ -194,7 +194,7 @@ class Struct:
         return self._key_chain_joint.join(self._key_chain)
 
 
-class StructEx(Struct):
+class DictTreeEx(DictTree):
     """
     Examples:
         see typical usage at `worklog_report_generator.main._report`
@@ -252,7 +252,3 @@ class StructEx(Struct):
     @property
     def struct(self):
         return self._struct[self._setin]
-
-
-if __name__ == '__main__':
-    _node_nav = StructEx({'score': 0, 'children': {}}, 'children')

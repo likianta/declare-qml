@@ -1,5 +1,6 @@
 from typing import *
 
+TComponent = ...
 TComponentID = ...
 #   see `pyml_pure_python.core.id_gen.IDGenerator`
 TComponentNo = int  # int >= 1
@@ -8,9 +9,9 @@ TLayerLevel = int  # int >= 0
 TRepresent = ...
 
 if __name__ == '__main__':
-    from .components.base_component import BaseComponent
-    from .core.uid_system import UID
+    from .components.base_component import BaseComponent as _Component
+    from .core.uid_system import UID as _UID
     
-    TComponentID = UID
-    TComponent = BaseComponent
+    TComponentID = Union[_UID, str]
+    TComponent = _Component
     TRepresent = Optional[TComponent]

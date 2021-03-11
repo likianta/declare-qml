@@ -119,12 +119,17 @@ class BaseComponent:
         from pyml.core import id_ref
         from pyml.keywords import this, parent
         this.point_to(id_ref[(pid := self.uid.parent_id)])
-        parent.point_to(id_ref[pid.parent_id])
+        parent.point_to(id_ref[pid.parent_id] if pid is not None else None)
     
     def build(self, offset=0):
         from textwrap import indent, dedent
         
-        qml_code = dedent('''
+        def strip(block_string: str):
+            return dedent(block_string)[1:].rstrip()
+            #   `[1:]`: 去除首行 (空行)
+            #   `.rstrip()`: 去除尾部的空行和空格
+        
+        qml_code = strip('''
             {component} {{
                 id: {id}
                 objectName: "{object_name}"
@@ -135,7 +140,7 @@ class BaseComponent:
                 // children
                 {children}
             }}
-        ''')[1:].rstrip().format(
+        ''').format(
             id=self.uid,
             object_name=self.name + str(self.uid)[3:],
             component=self.name,
