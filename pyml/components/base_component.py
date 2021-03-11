@@ -1,21 +1,17 @@
-"""
-Notes:
-    本模块在顶层不可以导入 `pyml_pure_python/core`, `pyml_pure_python/keywords`,
-    `pyml_pure_python/_typing_hint.py`, 因为它们都直接或间接地依赖于本模块 (在顶
-    层导入就构成了死循环)
-"""
 # noinspection PyProtectedMember
 from sys import _getframe
 
+from pyml._typing_hint import *
+
 
 class BaseComponent:
-    uid: ...  # UID
+    uid: TComponentID
     name: str
-    level: int
+    level: TLayerLevel
     
     # parent, children 在 __enter__ 中才能确定
-    parent: ...  # TComponent
-    children: ...  # list[TComponent]
+    parent: TRepresent
+    children: list[TComponent]
     
     _initialized = False
     _propagating = False

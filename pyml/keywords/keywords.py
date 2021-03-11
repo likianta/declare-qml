@@ -25,7 +25,7 @@ class DynamicKeyword:
     
     def __init__(self, name):
         self._virtual_ref = name
-        self._real_ref = None  # type: TRepresents
+        self._real_ref = None  # type: TRepresent
         self._initialized = True
     
     def __setattr__(self, key, value):
@@ -41,7 +41,7 @@ class DynamicKeyword:
         self._real_ref = com
 
     @property
-    def represents(self) -> TRepresents:
+    def represents(self) -> TRepresent:
         return self._real_ref
     
     @property

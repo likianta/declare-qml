@@ -97,10 +97,26 @@ class UID:
         # e.g. 'com_0x1_01_02' -> ['com', '0x1', '01_02'] -> '01_02'
         # -> count one underline(s)
         return self._uid.split('_', 2)[-1].count('_')
-
+    
+    
+class UIDReferences:
+    
+    _ref = {}
+    
+    def get(self, uid: Union[str, UID, None]):
+        if uid is None:
+            return None
+        if isinstance(uid, str):
+            return self._ref[uid]
+        else:
+            return self._ref[str(uid)]
+        
+    def __getitem__(self, item):
+        return self.get(item)
+    
 
 # ------------------------------------------------------------------------------
 
-id_ref = {None: None}
+id_ref = UIDReferences()
 id_gen = UIDGenerator()
 gen_id = id_gen.main

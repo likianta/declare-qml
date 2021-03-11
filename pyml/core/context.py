@@ -27,15 +27,8 @@ class Context:
     '''
     
     def update(self, uid: TComponentID, layer_level: TLayerLevel,
-               com: TComponent, last_com: TRepresents):
+               com: TComponent, last_com: TRepresent):
         """
-        
-        Args:
-            uid:
-            layer_level:
-            com:
-            last_com:
-
         Returns:
             (this, parent)
         """
