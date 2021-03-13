@@ -32,10 +32,8 @@ class Anchors(AutoDerivedProperty):
     #     else:
     #         return self.__dict__[item]
     
-    def __setattr__(self, key, value, propagate=True):
-        if key == 'fill' and isinstance(value, TComponent):
-            value = value.uid
-        super().__setattr__(key, value, propagate)
+    # def __setattr__(self, key, value, propagate=True):
+    #     super().__setattr__(key, value, propagate)
     
     def on_fill_changed(self, v):
         self.left = self.right = self.top = self.bottom = v

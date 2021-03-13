@@ -12,6 +12,7 @@ class Item(BaseComponent):
     size: tuple
     
     def _init_raw_props(self):
+        self.anchors = Anchors()
         self.enabled = true
         self.height = 0
         self.width = 0
@@ -29,25 +30,29 @@ class Item(BaseComponent):
         self.size = (self.width, v)
     
     @property
+    def full(self):
+        return str(self.uid)
+    
+    @property
     def left(self):
-        return self.uid
+        return f'{self.uid}.left'
     
     @property
     def right(self):
-        return self.uid
+        return f'{self.uid}.right'
     
     @property
     def top(self):
-        return self.uid
+        return f'{self.uid}.top'
     
     @property
     def bottom(self):
-        return self.uid
+        return f'{self.uid}.bottom'
     
     @property
     def hcenter(self):
-        return self.uid
+        return f'{self.uid}.horizontalCenter'
     
     @property
     def vcenter(self):
-        return self.uid
+        return f'{self.uid}.verticalCenter'

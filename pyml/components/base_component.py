@@ -162,6 +162,12 @@ class BaseComponent:
         
         for k in self._props['raw_props']:
             v = getattr(self, k)
+            
+            if k == 'anchors':
+                if v := str(v):
+                    out.extend(v.split('\n'))
+                continue
+                
             if isinstance(v, str):
                 v = f'"{v}"'
             out.append(f'{name_2_camel_case(k)}: {v}')
