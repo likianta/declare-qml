@@ -122,6 +122,10 @@ class BaseComponent:
         parent.point_to(id_ref[pid.parent_id] if pid is not None else None)
     
     def build(self, offset=0):
+        """
+        Examples:
+            see TODO
+        """
         from textwrap import indent, dedent
         
         def strip(block_string: str):

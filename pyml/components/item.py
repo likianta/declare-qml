@@ -1,8 +1,10 @@
+from pyml.core.property import Anchors
 from pyml.keywords import true
 from .base_component import BaseComponent
 
 
 class Item(BaseComponent):
+    anchors: Anchors
     enabled: bool
     height: float
     width: float
@@ -25,3 +27,27 @@ class Item(BaseComponent):
     
     def on_height_changed(self, v):
         self.size = (self.width, v)
+    
+    @property
+    def left(self):
+        return self.uid
+    
+    @property
+    def right(self):
+        return self.uid
+    
+    @property
+    def top(self):
+        return self.uid
+    
+    @property
+    def bottom(self):
+        return self.uid
+    
+    @property
+    def hcenter(self):
+        return self.uid
+    
+    @property
+    def vcenter(self):
+        return self.uid
