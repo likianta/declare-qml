@@ -42,6 +42,6 @@ def hump_2_underline_case(name: str):
 
 if __name__ == '__main__':
     main(
-        '../resources/no4_all_qml_props.json',
-        '../resources/no5_pyml_namespaces.json'
+        '../resources/no5_all_qml_props.json',
+        '../resources/no6_pyml_namespaces.json'
     )

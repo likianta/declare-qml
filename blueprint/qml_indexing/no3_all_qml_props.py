@@ -79,6 +79,6 @@ def _get_files(data: dict, idir: str):
 
 
 if __name__ == '__main__':
-    main('../resources/no3_all_qml_types.json',
-         '../resources/no4_all_qml_props.json')
+    main('../resources/no4_all_qml_types.json',
+         '../resources/no5_all_qml_props.json')
     lk.print_important_msg()

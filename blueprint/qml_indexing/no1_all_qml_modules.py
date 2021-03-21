@@ -8,45 +8,46 @@ from bs4 import BeautifulSoup
 from lk_utils import read_and_write
 
 
-def main(qtdoc_file: str):
+def main(file_i: str, file_o):
     """
     Args:
-        qtdoc_file: "{YourQtProgram}/Docs/Qt-{version}/qtdoc/modules-qml.html"
-    
-    Input:
-        `qtdoc_file`
-    Output:
-        "~/resources/all_qml_modules.json"
-            格式: {
-                'module_group': {module_group: name, ...},
-                    module_group: see `Notes:no1`
-                    name: see `Notes:no3`
-                'module': {module: name, ...}
-                    module: see `Notes:no2`
-            }
-            示例: {
-                'module_group': {
-                    'qtquick': 'QtQuick',
-                    'qtquickcontrols1': 'QtQuickControls1',
-                    ...
-                },
-                'module': {
-                    'qtquick-windows': 'QtQuick.Windows',
-                    ...
-                },
-            }
-        Notes:
-            1. `module_group` 的键是没有空格或连接符的, 只有纯小写字母和尾部数字
-               1 组成 (例如 'qtquickcontrols1')
-            2. `module` 的键是由纯小写字母和连接符组成 (例如 'qtquick-windows')
-            3. `name` 是由首字母大写的单词和点号组成 (例如 'QtGraphicalEffects')
-                1. 但是有一个特例: 'QtQuick.labs.xxx' 从 'lab' 开始全部都是小写
-                   (例如 'Qt.labs.folderlistmodel')
-            4. 该生成文件可被直接用于 `all_qml_types.py
-               :_correct_module_lettercase`
+        file_i: "~/blueprint/resources/no1_all_qml_modules.html". 该文件被我事先
+            从 "{YourQtProgram}/Docs/Qt-{version}/qtdoc/modules-qml.html" 拷贝过
+            来.
+        file_o: '~/blueprint/resources/no2_all_qml_modules.json'
+            "~/resources/all_qml_modules.json"
+                格式: {
+                    'module_group': {module_group: name, ...},
+                        module_group: see `Notes:no1`
+                        name: see `Notes:no3`
+                    'module': {module: name, ...}
+                        module: see `Notes:no2`
+                }
+                示例: {
+                    'module_group': {
+                        'qtquick': 'QtQuick',
+                        'qtquickcontrols1': 'QtQuickControls1',
+                        ...
+                    },
+                    'module': {
+                        'qtquick-windows': 'QtQuick.Windows',
+                        ...
+                    },
+                }
+            Notes:
+                1. `module_group` 的键是没有空格或连接符的, 只有纯小写字母和尾部
+                    数字 1 组成 (例如 'qtquickcontrols1')
+                2. `module` 的键是由纯小写字母和连接符组成 (例如 'qtquick
+                    -windows')
+                3. `name` 是由首字母大写的单词和点号组成 (例如
+                    'QtGraphicalEffects')
+                    1. 但是有一个特例: 'QtQuick.labs.xxx' 从 'lab' 开始全部都是
+                        小写(例如 'Qt.labs.folderlistmodel')
+                4. 该生成文件可被直接用于 `all_qml_types.py:_correct_module
+                    _lettercase`
     """
-    qtdoc_file = qtdoc_file.replace('\\', '/')
-    soup = BeautifulSoup(read_and_write.read_file(qtdoc_file), 'html.parser')
+    file_i = file_i.replace('\\', '/')
+    soup = BeautifulSoup(read_and_write.read_file(file_i), 'html.parser')
     container = soup.find('table', 'annotated')
     
     writer = {
@@ -142,7 +143,7 @@ def main(qtdoc_file: str):
         writer['module_group'][module_group] = _module_group
         writer['module'][module] = _module
     
-    read_and_write.dumps(writer, '../../resources/all_qml_modules.json')
+    read_and_write.dumps(writer, file_o)
 
 
 def correct_module_lettercase(module: str, words: list):
@@ -161,4 +162,5 @@ def correct_module_lettercase(module: str, words: list):
 
 
 if __name__ == '__main__':
-    main(r'D:/programs/qt/qt_5.14.2/Docs/Qt-5.14.2/qtdoc/modules-qml.html')
+    main('../resources/no1_all_qml_modules.html',
+         '../resources/no2_all_qml_modules.json')

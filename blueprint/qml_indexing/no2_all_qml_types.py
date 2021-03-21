@@ -16,7 +16,7 @@ def main(file_i, file_o, qtdoc_dir: str):
     """
     
     Args:
-        file_i: 'blueprint/resources/no2_all_qml_types.html'. 该文件被我事先从
+        file_i: '~/blueprint/resources/no2_all_qml_types.html'. 该文件被我事先从
             "{YourQtProgram}/Docs/Qt-{version}/qtdoc/qmltypes.html" 拷贝过来.
         file_o: 生成文件. "~/blueprint/resources/no3_all_qml_types.json"
             {
@@ -114,7 +114,7 @@ def main(file_i, file_o, qtdoc_dir: str):
 
 # ------------------------------------------------------------------------------
 
-qml_modules = read_and_write.loads('../resources/no1_all_qml_modules.json')
+qml_modules = read_and_write.loads('../resources/no2_all_qml_modules.json')
 qml_modules = qml_modules['module_group'] | qml_modules['module']  # type: dict
 qml_modules.update({  # 扩充
     ''                        : '',
@@ -158,6 +158,6 @@ def _correct_module_lettercase(module: str):
 
 
 if __name__ == '__main__':
-    main('../resources/no2_all_qml_types.html',
-         '../resources/no3_all_qml_types.json',
+    main('../resources/no3_all_qml_types.html',
+         '../resources/no4_all_qml_types.json',
          'D:/programs/qt/qt_5.14.2/Docs/Qt-5.14.2')
