@@ -14,7 +14,7 @@ class StaticKeyword:
         return str(self.value)
 
 
-class Final:
+class Const:
     
     def __init__(self, value):
         self.value = value
@@ -99,7 +99,7 @@ true = StaticKeyword('true', True)
 false = StaticKeyword('false', False)
 null = StaticKeyword('null', None)
 
+const = Const
+
 this = This()
 parent = Parent()
-
-final = Final

@@ -1,74 +1,69 @@
 from pyml._typing_hint import *
+from pyml.keywords import const
 from .property_control import GPropertyControl
 
 
 # noinspection PyUnusedLocal
 class Anchors(GPropertyControl):
-    fill = ''  # type: TComponentID
-    center = ''  # type: TComponentID
-    hcenter = ''  # type: TComponentID
-    vcenter = ''  # type: TComponentID
+    fill: TConstable[TComponentID]
+    center: TConstable[TComponentID]
     
-    left = ''  # type: TComponentID
-    right = ''  # type: TComponentID
-    top = ''  # type: TComponentID
-    bottom = ''  # type: TComponentID
+    left: TConstable[TComponentID]
+    right: TConstable[TComponentID]
+    top: TConstable[TComponentID]
+    bottom: TConstable[TComponentID]
     
-    margins = 0  # type: Union[int, tuple[int, ...], list[int]]
-    left_margin = 0  # type: int
-    right_margin = 0  # type: int
-    top_margin = 0  # type: int
-    bottom_margin = 0  # type: int
+    margins: Union[int, tuple[int, ...], list[int]]
+    left_margin: TConstable[int]
+    right_margin: TConstable[int]
+    top_margin: TConstable[int]
+    bottom_margin: TConstable[int]
     
     def _init_properties(self):
-        pass  # TODO: init properties here
-    
-    # def __getattr__(self, item):
-    #     if item in ('on_left_changed', 'on_right_changed',
-    #                 'on_top_changed', 'on_bottom_changed'):
-    #         return lambda v: self._on_side_changed(item, v)
-    #     else:
-    #         return self.__dict__[item]
-    
-    # def __setattr__(self, key, value, propagate=True):
-    #     super().__setattr__(key, value, propagate)
+        self.fill = ''
+        self.center = ''
+        self.left = ''
+        self.right = ''
+        self.top = ''
+        self.bottom = ''
+        self.margins = 0
+        self.left_margin = 0
+        self.right_margin = 0
+        self.top_margin = 0
+        self.bottom_margin = 0
     
     def on_fill_changed(self, v):
-        self.left = self.right = self.top = self.bottom = v
+        self.left = self.right = self.top = self.bottom = const(v)
         self.center = ''
     
-    # # def _on_side_changed(self, side, v):
-    # #     if self.fill != v: self.fill = ''
-    # #     if v: self.center = ''
-    
     def on_left_changed(self, v):
-        if self.fill != v: self.fill = ''
-        if v: self.center = ''
+        if self.fill != v: self.fill = const('')
+        if v: self.center = const('')
     
     def on_right_changed(self, v):
-        if self.fill != v: self.fill = ''
-        if v: self.center = ''
+        if self.fill != v: self.fill = const('')
+        if v: self.center = const('')
     
     def on_top_changed(self, v):
-        if self.fill != v: self.fill = ''
-        if v: self.center = ''
+        if self.fill != v: self.fill = const('')
+        if v: self.center = const('')
     
     def on_bottom_changed(self, v):
-        if self.fill != v: self.fill = ''
-        if v: self.center = ''
+        if self.fill != v: self.fill = const('')
+        if v: self.center = const('')
     
     def on_center_changed(self, v):
-        self.fill = self.left = self.right = self.top = self.bottom = ''
+        self.fill = self.left = self.right = self.top = self.bottom = const('')
     
     def on_hcenter_changed(self, v):
-        if v: self.left = self.right = ''
+        if v: self.left = self.right = const('')
     
     def on_vcenter_changed(self, v):
-        if v: self.top = self.bottom = ''
+        if v: self.top = self.bottom = const('')
     
     def on_margins_changed(self, v):
         self.left_margin = self.right_margin = \
-            self.top_margin = self.bottom_margin = v
+            self.top_margin = self.bottom_margin = const(v)
     
     def __str__(self):
         out = []

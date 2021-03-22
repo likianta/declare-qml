@@ -30,10 +30,9 @@ class _PropertyControl:
     def __setattr__(self, key, value, propagate=True):
         
         if self.__initialized:
-            if isinstance(value, (final, true, false, null)):
+            if isinstance(value, (const, true, false, null)):
                 send_signal = False
-                # noinspection PyTypeHints
-                if isinstance(value, final):
+                if isinstance(value, const):
                     value = value.value
             else:
                 send_signal = True
