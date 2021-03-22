@@ -18,7 +18,7 @@ class Final:
     
     def __init__(self, value):
         self.value = value
-
+        
 
 class DynamicKeyword:
     _initialized = False
