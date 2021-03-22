@@ -18,9 +18,16 @@ class Const:
     
     def __init__(self, value):
         self.value = value
+    
+
+def const(x):
+    if isinstance(x, Const):
+        return x
+    else:
+        return Const(x)
         
         
-def _consts(*args):
+def consts(*args):
     return map(Const, args)
 
 
@@ -102,9 +109,6 @@ class Parent(DynamicKeyword):
 true = StaticKeyword('true', True)
 false = StaticKeyword('false', False)
 null = StaticKeyword('null', None)
-
-const = Const
-consts = _consts
 
 this = This()
 parent = Parent()

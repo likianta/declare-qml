@@ -66,8 +66,13 @@ class Anchors(GPropertyControl):
         if v: self.top = self.bottom = const('')
     
     def on_margins_changed(self, v):
-        self.left_margin = self.right_margin = \
-            self.top_margin = self.bottom_margin = const(v)
+        if isinstance(v, int):
+            self.left_margin = self.right_margin = \
+                self.top_margin = self.bottom_margin = const(v)
+        else:
+            v = (list(v) + [0, 0, 0, 0])[:4]
+            self.left_margin, self.top_margin, \
+                self.right_margin, self.bottom_margin = v
     
     def __str__(self):
         out = []
