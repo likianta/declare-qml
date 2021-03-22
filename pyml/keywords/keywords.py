@@ -19,6 +19,10 @@ class Const:
     def __init__(self, value):
         self.value = value
         
+        
+def _consts(*args):
+    return map(Const, args)
+
 
 class DynamicKeyword:
     _initialized = False
@@ -100,6 +104,7 @@ false = StaticKeyword('false', False)
 null = StaticKeyword('null', None)
 
 const = Const
+consts = _consts
 
 this = This()
 parent = Parent()

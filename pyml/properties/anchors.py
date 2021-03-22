@@ -1,12 +1,16 @@
 from pyml._typing_hint import *
 from pyml.keywords import const
+
 from .property_control import GPropertyControl
 
 
 # noinspection PyUnusedLocal
 class Anchors(GPropertyControl):
     fill: TConstable[TComponentID]
+    
     center: TConstable[TComponentID]
+    horizontal_center: TConstable[TComponentID]
+    vertical_center: TConstable[TComponentID]
     
     left: TConstable[TComponentID]
     right: TConstable[TComponentID]
@@ -55,10 +59,10 @@ class Anchors(GPropertyControl):
     def on_center_changed(self, v):
         self.fill = self.left = self.right = self.top = self.bottom = const('')
     
-    def on_hcenter_changed(self, v):
+    def on_horizontal_center_changed(self, v):
         if v: self.left = self.right = const('')
     
-    def on_vcenter_changed(self, v):
+    def on_vertical_center_changed(self, v):
         if v: self.top = self.bottom = const('')
     
     def on_margins_changed(self, v):
@@ -74,15 +78,17 @@ class Anchors(GPropertyControl):
         elif self.center:
             out.append(f'anchors.centerIn: {self.center}')
         else:
-            if self.hcenter:
-                out.append(f'anchors.horizontalCenter: {self.hcenter}')
+            if self.horizontal_center:
+                out.append(f'anchors.horizontalCenter: '
+                           f'{self.horizontal_center}')
             else:
                 if self.left:
                     out.append(f'anchors.left: {self.left}')
                 if self.right:
                     out.append(f'anchors.right: {self.right}')
-            if self.vcenter:
-                out.append(f'anchors.verticalCenter: {self.vcenter}')
+            if self.vertical_center:
+                out.append(f'anchors.verticalCenter: '
+                           f'{self.vertical_center}')
             else:
                 if self.top:
                     out.append(f'anchors.left: {self.top}')
@@ -104,23 +110,98 @@ class Anchors(GPropertyControl):
 
 
 class DialectAnchors(Anchors):
-    lcenter: TComponentID
-    rcenter: TComponentID
-    tcenter: TComponentID
-    bcenter: TComponentID
-    hcenter: TComponentID
-    vcenter: TComponentID
+    lcenter: TConstable[TComponentID]
+    rcenter: TConstable[TComponentID]
+    tcenter: TConstable[TComponentID]
+    bcenter: TConstable[TComponentID]
+    hcenter: TConstable[TComponentID]
+    vcenter: TConstable[TComponentID]
     
-    lside: TComponentID
-    rside: TComponentID
-    tside: TComponentID
-    bside: TComponentID
-    hside: TComponentID
-    vside: TComponentID
+    lside: TConstable[TComponentID]
+    rside: TConstable[TComponentID]
+    tside: TConstable[TComponentID]
+    bside: TConstable[TComponentID]
+    hside: TConstable[TComponentID]
+    vside: TConstable[TComponentID]
     
-    lmargin: int
-    rmargin: int
-    tmargin: int
-    bmargin: int
-    hmargins: int
-    vmargins: int
+    lmargin: TConstable[int]
+    rmargin: TConstable[int]
+    tmargin: TConstable[int]
+    bmargin: TConstable[int]
+    hmargins: Union[TConstable[int], tuple[TConstable[int], TConstable[int]]]
+    vmargins: Union[TConstable[int], tuple[TConstable[int], TConstable[int]]]
+    
+    def _init_properties(self):
+        super(DialectAnchors, self)._init_properties()
+        self.lcenter = ''
+        self.rcenter = ''
+        self.tcenter = ''
+        self.bcenter = ''
+        self.hcenter = ''
+        self.vcenter = ''
+        self.lside = ''
+        self.rside = ''
+        self.tside = ''
+        self.bside = ''
+        self.hside = ''
+        self.vside = ''
+        self.lmargin = 0
+        self.rmargin = 0
+        self.tmargin = 0
+        self.bmargin = 0
+        self.hmargins = 0
+        self.vmargins = 0
+    
+    def on_lcenter_changed(self, v):
+        self.on_left_changed(v)
+        self.on_vertical_center_changed(v)
+    
+    def on_rcenter_changed(self, v):
+        self.on_right_changed(v)
+        self.on_vertical_center_changed(v)
+    
+    def on_tcenter_changed(self, v):
+        self.on_top_changed(v)
+        self.on_horizontal_center_changed(v)
+    
+    def on_bcenter_changed(self, v):
+        self.on_bottom_changed(v)
+        self.on_horizontal_center_changed(v)
+    
+    def on_hcenter_changed(self, v):
+        self.on_horizontal_center_changed(v)
+    
+    def on_vcenter_changed(self, v):
+        self.on_vertical_center_changed(v)
+    
+    def on_lside_changed(self, v):
+        self.on_left_changed(v)
+    
+    def on_rside_changed(self, v):
+        self.on_right_changed(v)
+    
+    def on_tside_changed(self, v):
+        self.on_top_changed(v)
+    
+    def on_bside_changed(self, v):
+        self.on_bottom_changed(v)
+    
+    def on_hside_changed(self, v):
+        self.on_left_changed(v)
+        self.on_right_changed(v)
+    
+    def on_vside_changed(self, v):
+        self.on_top_changed(v)
+        self.on_bottom_changed(v)
+    
+    def on_hmargins_changed(self, v):
+        if isinstance(v, TConstable[int]):
+            self.left_margin = self.right_margin = v
+        else:
+            self.left_margin, self.right_margin = v
+    
+    def on_vmargins_changed(self, v):
+        if isinstance(v, TConstable[int]):
+            self.top_margin = self.bottom_margin = v
+        else:
+            self.top_margin, self.bottom_margin = v
