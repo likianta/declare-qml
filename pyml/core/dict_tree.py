@@ -146,7 +146,7 @@ class DictTree:
         def rec(node: dict):
             for k, v in node.items():
                 key_chain.append(k)  # ['A1'] -> ['A1.B1']
-                yield (self._key_chain_joint.join(key_chain), k)
+                yield self._key_chain_joint.join(key_chain), k
                 yield from rec(v)  # ['A1.B1'] -> ['A1']
             if key_chain:
                 key_chain.pop()

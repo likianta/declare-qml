@@ -1,5 +1,5 @@
 from pyml.keywords import true
-from .item import Item
+from pyml.widgets.item import Item
 
 
 class Window(Item):

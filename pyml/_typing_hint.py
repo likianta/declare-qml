@@ -9,7 +9,7 @@ TLayerLevel = int  # int >= 0
 TRepresent = ...
 
 if __name__ == '__main__':
-    from .components.base_component import BaseComponent as _Component
+    from .widgets.base_component import BaseComponent as _Component
     from .core.uid_system import UID as _UID
     
     TComponentID = Union[_UID, str]

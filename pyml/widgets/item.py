@@ -1,5 +1,6 @@
-from pyml.core.property import Anchors
+from ..properties.anchors import Anchors
 from pyml.keywords import true
+
 from .base_component import BaseComponent
 
 
