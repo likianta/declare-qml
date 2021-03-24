@@ -10,37 +10,48 @@ def main(file_i, file_o):
         file_i: '~/resources/no4_all_qml_props.json'. see `no3_all_qml_props.py`
         file_o: '~/resources/no5_pyml_namespaces.json'
     """
-    reader = read_and_write.loads(file_i)  # type: dict
-    writer = defaultdict(lambda: defaultdict(dict))
+    data_i = read_and_write.loads(file_i)  # type: dict
+    data_o = defaultdict(lambda: defaultdict(dict))
     '''
-        {package: {component: {'parent': str, 'props': [str, ...]}, ...}, ...}
+        {
+            package: {
+                widget: {
+                    'parent': str,
+                    'props': {prop: type, ...}
+                }, ...
+            }, ...
+        }
         e.g. {
             'pyml.qtquick': {
                 'Rectangle': {
                     'parent': 'Item',
-                    'props': [
-                        'border', 'border.color', ...
-                    ]
+                    'props': {
+                        'border': 'group',
+                        'border.color': 'color',
+                        ...
+                    }
                 }, ...
             }, ...
         }
     '''
     
-    for qml_module, node1 in reader.items():
-        for qml_type, node2 in node1.items():
-            pyml_module = f'pyml.{qml_module.lower()}'
-            component = qml_type
+    for module, v1 in data_i.items():
+        for type_, v2 in v1.items():
+            package = f'pyml.{module.lower()}'
+            widget = type_
             
-            writer[pyml_module][component] = {
-                'package': 'pyml.{}'.format(node2['import'].lower()),
-                'parent' : node2['inherits'],
-                'props'  : tuple(map(hump_2_underline_case, node2['props'])),
+            data_o[package][widget] = {
+                'parent': v2['parent'],
+                'props' : dict(zip(
+                    map(_camel_2_snake_case, v2['props'].keys()),
+                    v2['props'].values()
+                ))
             }
     
-    read_and_write.dumps(writer, file_o)
+    read_and_write.dumps(data_o, file_o)
 
 
-def hump_2_underline_case(name: str):
+def _camel_2_snake_case(name: str):
     """ 驼峰转下划线式命名.
     
     References:
@@ -53,6 +64,6 @@ def hump_2_underline_case(name: str):
 
 if __name__ == '__main__':
     main(
-        'resources/no5_all_qml_props.json',
-        'resources/no6_pyml_namespaces.json'
+        '../resources/no5_all_qml_props.json',
+        '../resources/no6_pyml_namespaces.json'
     )

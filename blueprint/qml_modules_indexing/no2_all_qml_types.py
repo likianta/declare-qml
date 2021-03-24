@@ -12,41 +12,30 @@ from lk_logger import lk
 from lk_utils import read_and_write
 
 
-def main(file_i, file_o, qtdoc_dir: str):
+def main(file_i, file_o):
     """
     
     Args:
         file_i: '~/blueprint/resources/no2_all_qml_types.html'. 该文件被我事先从
             "{YourQtProgram}/Docs/Qt-{version}/qtdoc/qmltypes.html" 拷贝过来.
         file_o: 生成文件. "~/blueprint/resources/no3_all_qml_types.json"
-            {
-                'qtdoc_dir': path,
-                'data': {module_group: {module: {type_name: path}, ...}, ...}
-                #   {模组: {模块: {类型: 路径}}}
-                    path: 相对于 `qtdoc_dir` 的路径
-            }
-            
+            {module_group: {module: {type_name: path}, ...}, ...}
+            #   {模组: {模块: {类型: 路径}}}
             e.g. {
-                'qtdoc_dir': 'D:/Programs/Qt/Docs/Qt-5.14.2'
-                'data': {
+                'qtquick': {
                     'qtquick': {
-                        'qtquick': {
-                            'Rectangle': 'qtquick/qml-qtquick-rectangle.html',
-                            'Text': 'qtquick/qml-qtquick-text.html',
-                            ...
-                        },
-                        'qtquick-window': {
-                            'Window': 'qtquick/qml-qtquick-window-window.html',
-                            ...
-                        },
+                        'Rectangle': 'qtquick/qml-qtquick-rectangle.html',
+                        'Text': 'qtquick/qml-qtquick-text.html',
+                        ...
+                    },
+                    'qtquick-window': {
+                        'Window': 'qtquick/qml-qtquick-window-window.html',
                         ...
                     },
                     ...
-                }
+                },
+                ...
             }
-        qtdoc_dir: 此参数在本模块中只用于记录到输出文件中, 不做任何其他处理. 请
-            传入您的 Qt 安装程序的 Docs 目录. 例如:
-                'D:/Programs/Qt/Docs/Qt-5.14.2'
     
     思路:
         1. 我们安装了 Qt 主程序以后, 在软件安装目录下的 'Docs/Qt-{version}' 中有
@@ -59,12 +48,8 @@ def main(file_i, file_o, qtdoc_dir: str):
     soup = BeautifulSoup(read_and_write.read_file(file_i), 'html.parser')
     
     # https://www.itranslater.com/qa/details/2325827141935563776
-    writer = {
-        'qtdoc_dir': qtdoc_dir,  # qtdoc_dir 仅用作记录
-        'data'     : defaultdict(lambda: defaultdict(dict))
-        #   {module_group: {module: {type_name: filename, ...}, ...}, ...}
-    }
-    data = writer['data']
+    data = defaultdict(lambda: defaultdict(dict))
+    #   {module_group: {module: {type_name: filename, ...}, ...}, ...}
     
     container = soup.find('div', 'flowListDiv')
     for e in container.find_all('dd'):
@@ -81,14 +66,22 @@ def main(file_i, file_o, qtdoc_dir: str):
         #   match.group(2): 'qml-qtdatavisualization-abstract3dseries'
         assert match, e
         
+        module_group = match.group(1)
+        module = match.group(2)
+        # see `blueprint/qml_modules_indexing/no1_all_qml_modules.py:comments
+        # :针对 QtQuick Controls 的处理`
+        if module_group == 'qtquickcontrols1':
+            continue
+        if 'qtquick-controls2' in module:
+            #   e.g. 'qml-qtquick-controls2-label'
+            module = module.replace('controls2', 'controls')
+        
         path = match.group(0).lstrip('../')
         #   -> 'qtdatavisualization/qml-qtdatavisualization-abstract3dseries
         #   .html'
-        module_group = _correct_module_lettercase(match.group(1))
+        module_group = _correct_module_lettercase(module_group)
         #   'qtdatavisualization' -> 'QtDataVisualization'
-        module = _correct_module_lettercase(
-            '-'.join(match.group(2).split('-')[1:-1])
-        )
+        module = _correct_module_lettercase('-'.join(module.split('-')[1:-1]))
         #   eg1: 'qml-qtdatavisualization-abstract3dseries' -> ['qml',
         #   'qtdatavisualization', 'abstract3dseries'] -> [
         #   'qtdatavisualization'] -> 'qtdatavisualization'
@@ -104,17 +97,17 @@ def main(file_i, file_o, qtdoc_dir: str):
         #   `module_group` 和 `module` 做了覆盖, 不能保证对 `type_name` 的处理正
         #   确; 而 `soup` 是可以比较轻松地通过 tag 提取到它的, 所以通过 html 元
         #   素获取.
-        #   e.g. 'RadioButton: QtQuickControls1' -> 'RadioButton'
+        #   e.g. 'RadioButton: QtQuickControls' -> 'RadioButton'
         
         lk.loga(module_group, module, type_name)
         data[module_group][module][type_name] = path
     
-    read_and_write.dumps(writer, file_o)
+    read_and_write.dumps(data, file_o)
 
 
 # ------------------------------------------------------------------------------
 
-qml_modules = read_and_write.loads('resources/no2_all_qml_modules.json')
+qml_modules = read_and_write.loads('../resources/no2_all_qml_modules.json')
 qml_modules = qml_modules['module_group'] | qml_modules['module']  # type: dict
 qml_modules.update({  # 扩充
     ''                        : '',
@@ -154,10 +147,10 @@ def _correct_module_lettercase(module: str):
         目前采用的是方案 2. 方案 2 需要提前准备这样一个单词列表, 见:
             `blueprint/qml_indexing/no1_all_qml_modules.py`.
     """
+    global qml_modules
     return qml_modules[module]
 
 
 if __name__ == '__main__':
-    main('resources/no3_all_qml_types.html',
-         'resources/no4_all_qml_types.json',
-         'D:/programs/qt/qt_5.14.2/Docs/Qt-5.14.2')
+    main('../resources/no3_all_qml_types.html',
+         '../resources/no4_all_qml_types.json')
