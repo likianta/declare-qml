@@ -12,8 +12,19 @@ def main(file_i, file_o):
     """
     reader = read_and_write.loads(file_i)  # type: dict
     writer = defaultdict(lambda: defaultdict(dict))
-    #   {module: {component: dict x, ...}, ...}
-    #       x: {'import': ..., 'inherits': ..., 'props': ...}
+    '''
+        {package: {component: {'parent': str, 'props': [str, ...]}, ...}, ...}
+        e.g. {
+            'pyml.qtquick': {
+                'Rectangle': {
+                    'parent': 'Item',
+                    'props': [
+                        'border', 'border.color', ...
+                    ]
+                }, ...
+            }, ...
+        }
+    '''
     
     for qml_module, node1 in reader.items():
         for qml_type, node2 in node1.items():
@@ -21,9 +32,9 @@ def main(file_i, file_o):
             component = qml_type
             
             writer[pyml_module][component] = {
-                'import'  : 'pyml.{}'.format(node2['import'].lower()),
-                'inherits': node2['inherits'],
-                'props'   : tuple(map(hump_2_underline_case, node2['props'])),
+                'package': 'pyml.{}'.format(node2['import'].lower()),
+                'parent' : node2['inherits'],
+                'props'  : tuple(map(hump_2_underline_case, node2['props'])),
             }
     
     read_and_write.dumps(writer, file_o)
@@ -42,6 +53,6 @@ def hump_2_underline_case(name: str):
 
 if __name__ == '__main__':
     main(
-        '../resources/no5_all_qml_props.json',
-        '../resources/no6_pyml_namespaces.json'
+        'resources/no5_all_qml_props.json',
+        'resources/no6_pyml_namespaces.json'
     )

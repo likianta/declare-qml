@@ -10,26 +10,25 @@ from lk_utils.read_and_write import loads
 def main(file_i, file_o):
     """
     Args:
-        file_i: '~/resources/no3_all_qml_types.json'. see `no2_all_qml_types.py`
-        file_o: '~/resources/no4_all_qml_props.json'
+        file_i: '~/resources/no4_all_qml_types.json'. see `no2_all_qml_types.py`
+        file_o: '~/resources/no5_all_qml_props.json'
             {
                 module: {
                     qmltype: {
-                        'import': module,
-                        'inherits': parent_qmltype,
-                        'props': [
-                            prop, ...
-                        ]
+                        'parent': parent_qmltype,
+                        'props': [ prop, ... ]
                     }, ...
                 }, ...
             }
     """
     reader = read_and_write.loads(file_i)  # type: dict
     writer = defaultdict(lambda: defaultdict(lambda: {
-        'import'  : '',
-        'inherits': '',
-        'props'   : []
+        'parent': '',
+        'props' : [],
     }))
+    
+    if not exists(d := reader['qtdoc_dir']):
+        raise FileNotFoundError('The Qt Docs directory doesn\'t exist!', d)
     
     for module, qmltype, file_i in _get_files(
             reader['data'], reader['qtdoc_dir']
@@ -37,23 +36,22 @@ def main(file_i, file_o):
         lk.logax(qmltype)
         
         if not exists(file_i):
-            lk.logt('[W3924]', 'file not found', qmltype)
-            writer[module][qmltype]['import'] = module
+            lk.logt('[I3924]', 'file not found', qmltype)
             continue
         
         soup = BeautifulSoup(loads(file_i), 'html.parser')
-        #   以 '{qt}/Docs/Qt-5.14.2/qtquick/qml-qtquick-rectangle.html' 为例分析
+        #   以 '{qtdoc_dir}/qtquick/qml-qtquick-rectangle.html' 为例分析
         
-        try:  # inherits
+        try:  # get parent
             e = soup.find('table', 'alignedsummary')
             e = e.tr.find_next_sibling('tr')
             if e.td.text.strip() == 'Inherits:':
                 e = e.find('td', 'memItemRight bottomAlign')
-                parent_component = e.text.strip()
+                parent = e.text.strip()
             else:
-                parent_component = ''
+                parent = ''
         except AttributeError:
-            parent_component = ''
+            parent = ''
         
         try:  # props
             e = soup.find(id='properties')
@@ -62,8 +60,7 @@ def main(file_i, file_o):
         except AttributeError:
             props = []
         
-        writer[module][qmltype]['import'] = module
-        writer[module][qmltype]['inherits'] = parent_component
+        writer[module][qmltype]['parent'] = parent
         writer[module][qmltype]['props'] = props
         
         del soup
@@ -71,14 +68,14 @@ def main(file_i, file_o):
     read_and_write.dumps(writer, file_o)
 
 
-def _get_files(data: dict, idir: str):
+def _get_files(data: dict, dir_i: str):
     for module_group, node1 in data.items():
         for module, node2 in node1.items():
             for qmltype, relpath in node2.items():
-                yield module, qmltype, idir + '/' + relpath
+                yield module, qmltype, dir_i + '/' + relpath
 
 
 if __name__ == '__main__':
-    main('../resources/no4_all_qml_types.json',
-         '../resources/no5_all_qml_props.json')
+    main('resources/no4_all_qml_types.json',
+         'resources/no5_all_qml_props.json')
     lk.print_important_msg()

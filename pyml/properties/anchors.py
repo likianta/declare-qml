@@ -1,5 +1,5 @@
 from pyml._typing_hint import *
-from pyml.keywords import const
+from pyml.keywords import const, consts
 
 from .property_control import GPropertyControl
 
@@ -72,7 +72,7 @@ class Anchors(GPropertyControl):
         else:
             v = (list(v) + [0, 0, 0, 0])[:4]
             self.left_margin, self.top_margin, \
-                self.right_margin, self.bottom_margin = v
+                self.right_margin, self.bottom_margin = consts(*v)
     
     def __str__(self):
         out = []
