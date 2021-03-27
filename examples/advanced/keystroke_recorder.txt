@@ -1,0 +1,66 @@
+from pyml import *
+from pyml.widgets import *
+
+
+class MyApp(Application):
+
+    def build(self):
+        with Window():
+            this.width = 400
+            this.height = 800
+
+            with TopBar():
+                this.anchors.bind(
+                    parent.left, parent.top, parent.right,
+                    margins=10
+                )
+                #   this.anchors.hside = parent.hside
+                #   this.anchors.top = parent.top
+                #   this.anchors.margins = 10
+                this.height = 40
+
+
+class TopBar(Component):
+
+    def __init__(self):
+        super().__init__()
+        self.recorder = Recorder()
+
+    def build(self):
+        with Row():
+            this.spacing = 'auto'
+            this.hpadding = 'auto'
+
+            for text, func in [
+                ('left', self.on_press_left),
+                ('right', self.on_press_right),
+                ('keystroke', self.on_keystroke),
+                ('input', self.on_input),
+            ]:
+                with Button():
+                    this.vcenter = parent.vcenter
+                    this.text = text
+                    this.clicked.connect(func)
+            return this
+
+    def on_press_left(self):
+        pos = self.record_pos()
+        self.recorder.append('left', pos)
+
+    def on_press_right(self):
+        pos = self.record_pos()
+        self.recorder.append('right', pos)
+
+    def on_keystroke(self):
+        keys = ...
+        self.recorder.append('keystroke', str(keys))
+
+    def on_input(self):
+        self.recorder.append('input', ...)
+
+    def record_pos(self):
+        return ...
+
+
+class Recorder:
+    pass
