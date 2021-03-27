@@ -7,7 +7,7 @@ def static_qml_basic_types(file_i, file_o):
     """ 统计 qml 的基本类型有哪些.
     
     Args:
-        file_i: 'blueprint/resources/no5_all_qml_props.json'
+        file_i: 'blueprint/resources/no5_all_qml_widgets.json'
             structure: {
                 module: {
                     qmltype: {
@@ -40,5 +40,5 @@ def static_qml_basic_types(file_i, file_o):
 
 if __name__ == '__main__':
     static_qml_basic_types(
-        '../resources/no5_all_qml_props.json', '../../tests/test.json'
+        '../resources/no5_all_qml_widgets.json', '../../tests/test.json'
     )

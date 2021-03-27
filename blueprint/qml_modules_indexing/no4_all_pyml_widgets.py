@@ -7,7 +7,7 @@ from lk_utils import read_and_write
 def main(file_i, file_o):
     """
     Args:
-        file_i: '~/resources/no4_all_qml_props.json'. see `no3_all_qml_props.py`
+        file_i: '~/resources/no4_all_qml_props.json'. see `no3_all_qml_widgets.py`
         file_o: '~/resources/no5_pyml_namespaces.json'
     """
     data_i = read_and_write.loads(file_i)  # type: dict
@@ -115,6 +115,6 @@ def _camel_2_snake_case(name: str):
 
 if __name__ == '__main__':
     main(
-        '../resources/no5_all_qml_props.json',
-        '../resources/no6_pyml_namespaces.json'
+        '../resources/no5_all_qml_widgets.json',
+        '../resources/no6_all_pyml_widgets.json'
     )

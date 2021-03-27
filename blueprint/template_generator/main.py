@@ -17,7 +17,7 @@ class TypeHint:
 
 
 def create_package_dirs(data: TypeHint.DataR):
-    # data: from `loads('../resources/no5_all_qml_props.json')`
+    # data: from `loads('../resources/no6_all_pyml_widgets.json')`
     from os import mkdir
     from os.path import abspath, exists
     
@@ -45,7 +45,7 @@ def main():
     #   keywords: IMPORTS, WIDGET_NAME, PARENT_NAME, PROPS_TYPE_HINT,
     #       PROPS_INIT, ON_PROPS_CHAGNED, ON_SIGNALS_EMIT
     
-    data_r: TypeHint.DataR = loads('../resources/no6_pyml_namespaces.json')
+    data_r: TypeHint.DataR = loads('../resources/no6_all_pyml_widgets.json')
     
     for package, v1 in data_r.items():
         for k2, v2 in v1.items():

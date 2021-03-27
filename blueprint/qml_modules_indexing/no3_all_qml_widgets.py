@@ -11,7 +11,7 @@ def main(file_i, file_o, qtdoc_dir: str):
     """
     Args:
         file_i: '~/resources/no4_all_qml_types.json'. see `no2_all_qml_types.py`
-        file_o: '~/resources/no5_all_qml_props.json'
+        file_o: '~/resources/no5_all_qml_widgets.json'
             {
                 module: {
                     qmltype: {
@@ -125,6 +125,6 @@ def _get_files(data: dict, dir_i: str):
 
 if __name__ == '__main__':
     main('../resources/no4_all_qml_types.json',
-         '../resources/no5_all_qml_props.json',
+         '../resources/no5_all_qml_widgets.json',
          'D:/programs/qt/qt_5.14.2/Docs/Qt-5.14.2')
     lk.print_important_msg()
