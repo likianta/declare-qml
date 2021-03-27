@@ -112,7 +112,7 @@ qml_modules = qml_modules['module_group'] | qml_modules['module']  # type: dict
 qml_modules.update({  # 扩充
     ''                        : '',
     'qtquick-controls-private': 'QtQuick.Controls.Private',
-    'mediaplayer-qml'         : 'MediaPlayer.Qml',
+    'mediaplayer-qml'         : 'QtMediaPlayer',
     #   注: 这个其实是不存在的, 只是为了不报错所以加上去
 })
 

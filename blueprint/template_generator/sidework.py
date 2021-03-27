@@ -1,7 +1,6 @@
 from collections import defaultdict
 
-from lk_logger import lk
-from lk_utils.read_and_write import loads, dumps
+from lk_utils.read_and_write import dumps, loads
 
 
 def static_qml_basic_types(file_i, file_o):
@@ -32,12 +31,11 @@ def static_qml_basic_types(file_i, file_o):
             for k3, v3 in v2['props'].items():
                 # k1: module; k2: qmltype; k3: prop; v3: type
                 data_w[v3].add((k1, k2, k3))
-                
-    if file_o == '':
-        lk.logp(sorted(data_w.keys()))
-    else:
+    
+    [print(i, k) for i, k in enumerate(sorted(data_w.keys()), 1)]
+    if file_o:
         data_w = {k: sorted(data_w[k]) for k in sorted(data_w.keys())}
-        dumps(data_w, file_o)
+        dumps(data_w, file_o, pretty_dump=True)
 
 
 if __name__ == '__main__':
