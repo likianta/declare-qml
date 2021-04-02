@@ -17,7 +17,7 @@
                      | }
 """
 import re
-from pyml_dsl.core._typing_hints import InterpreterHint as Hint
+from pyml_rc.pyml_dsl.core._typing_hints import InterpreterHint as Hint
 
 
 class BaseInterpreter:
