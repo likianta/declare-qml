@@ -1,5 +1,3 @@
-from lk_logger import lk
-
 from ..context_manager import context, parent, this
 from ..context_manager.uid_system import UID, gen_id, id_ref
 
@@ -61,7 +59,6 @@ class BaseComponent:
         
         self.level = last_com.level + 1 if last_com is not None else 0
         self.uid = gen_id(self.level)
-        lk.loga('enter', self.uid, h='parent')
         
         context.update(self.uid, self.level, self, last_com)
         #   after `context.update`, `this` and `parent` now work as expected.
@@ -80,8 +77,6 @@ class BaseComponent:
             return
         
         self.build()
-        
-        lk.loga('exit', self.uid, h='parent')
         
         self._add_self_to_parent(this.represents, parent.represents)
         
