@@ -11,7 +11,7 @@ from collections import defaultdict
 
 from lk_logger import lk
 
-from pyml_rc.pyml_dsl.core._typing_hints import InterpreterHint as Hint
+from pyml_rc.declare_pyml.core._typing_hints import InterpreterHint as Hint
 
 
 class PlainComposer:
@@ -209,7 +209,7 @@ class ComponentComposer:
     # --------------------------------------------------------------------------
     
     def main(self):
-        from pyml_rc.pyml_dsl.core.composer.lang_interp import (
+        from pyml_rc.declare_pyml.core.composer.lang_interp import (
             PymlInterpreter, PythonInterpreter, QmlInterpreter
         )
         

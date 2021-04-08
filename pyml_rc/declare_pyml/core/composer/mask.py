@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 from lk_logger import lk
 
-from pyml_rc.pyml_dsl.core._typing_hints import MaskHint as Hint
+from pyml_rc.declare_pyml.core._typing_hints import MaskHint as Hint
 
 
 class Mask:
