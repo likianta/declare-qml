@@ -64,6 +64,8 @@ class BaseComponent:
         #   after `context.update`, `this` and `parent` now work as expected.
         #   i.e. now `this` represents `self`, and `parent` represents `last_com`
         
+        self._enter_extra()
+        
         return self
     
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -78,12 +80,15 @@ class BaseComponent:
         
         self.build()
         
-        self._add_self_to_parent(this.represents, parent.represents)
+        self._exit_extra(this.represents, parent.represents)
         
         this.point_to(id_ref[(pid := self.uid.parent_id)])
         parent.point_to(id_ref[pid.parent_id] if pid else None)
-    
-    def _add_self_to_parent(self, child_com, parent_com):
+
+    def _enter_extra(self):
+        raise NotImplementedError
+
+    def _exit_extra(self, child_com, parent_com):
         """
         Caller:
             self.__exit__
