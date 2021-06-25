@@ -1,10 +1,10 @@
 from collections import defaultdict
 from os.path import exists
 
-from bs4 import BeautifulSoup
-from lk_utils import read_and_write
-from lk_utils.lk_logger import lk
-from lk_utils.read_and_write import loads
+# noinspection PyUnresolvedReferences
+from bs4 import BeautifulSoup  # pip install bs4
+from lk_logger import lk
+from lk_utils import dumps, loads
 
 
 def main(file_i, file_o, qtdoc_dir: str):
@@ -12,18 +12,10 @@ def main(file_i, file_o, qtdoc_dir: str):
     Args:
         file_i: '~/resources/no4_all_qml_types.json'. see `no2_all_qml_types.py`
         file_o: '~/resources/no5_all_qml_widgets.json'
-            {
-                module: {
-                    qmltype: {
-                        'parent': parent_qmltype,
-                        'props': {prop: type, ...}
-                    }, ...
-                }, ...
-            }
         qtdoc_dir: 请传入您的 Qt 安装程序的 Docs 目录. 例如: 'D:/Programs/Qt
             /Docs/Qt-5.14.2' (该路径须确实存在)
     """
-    reader = read_and_write.loads(file_i)  # type: dict
+    reader = loads(file_i)  # type: dict
     writer = defaultdict(lambda: defaultdict(lambda: {
         'parent': '',
         'props' : {},
@@ -113,7 +105,7 @@ def main(file_i, file_o, qtdoc_dir: str):
         
         del soup
     
-    read_and_write.dumps(writer, file_o)
+    dumps(writer, file_o)
 
 
 def _get_files(data: dict, dir_i: str):

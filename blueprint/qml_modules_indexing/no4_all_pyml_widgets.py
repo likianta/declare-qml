@@ -1,39 +1,20 @@
-import re
 from collections import defaultdict
 
+import re
 from lk_utils import read_and_write
+
+from blueprint.typehint import *
 
 
 def main(file_i, file_o):
     """
     Args:
-        file_i: '~/resources/no4_all_qml_props.json'. see `no3_all_qml_widgets.py`
-        file_o: '~/resources/no5_pyml_namespaces.json'
+        file_i: '../resources/no5_all_qml_widgets.json'
+            see `no3_all_qml_widgets.py`
+        file_o: '../resources/no6_all_pyml_widgets.json'
     """
     data_i = read_and_write.loads(file_i)  # type: dict
-    data_o = defaultdict(lambda: defaultdict(dict))
-    '''
-        {
-            package: {
-                widget: {
-                    'parent': str,
-                    'props': {prop: type, ...}
-                }, ...
-            }, ...
-        }
-        e.g. {
-            'qtquick': {
-                'Rectangle': {
-                    'parent': 'Item',
-                    'props': {
-                        'border': 'group',
-                        'border.color': 'color',
-                        ...
-                    }
-                }, ...
-            }, ...
-        }
-    '''
+    data_o = defaultdict(lambda: defaultdict(dict))  # type: TDataNo6
     
     for module, v1 in data_i.items():
         for type_, v2 in v1.items():

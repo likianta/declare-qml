@@ -1,8 +1,4 @@
 lk-lambdex
 lk-logger
-lk-utils
+lk-utils >= 2.0
 pyside6
-
-; for development
-bs4
-beautifulsoup4
