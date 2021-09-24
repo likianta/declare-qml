@@ -1,4 +1,13 @@
-from declare_foundation.typehint import *
+from typing import *
+
+if __name__ == '__main__':
+    from declare_foundation.components import BaseComponent as _Component
+else:
+    _Component = None
+
+# ------------------------------------------------------------------------------
+
+TComponent = _Component
 
 # TComponentID = Union[TComponent, str]
 # TComponentNo = int  # int >= 1
@@ -7,7 +16,7 @@ TProperties = dict
 TPyVal = Any  # 'Python Value'
 
 
-class _Constable:
+class _Final:
     """
     Constable type.
     
@@ -15,8 +24,8 @@ class _Constable:
     """
     
     def __getitem__(self, item):
-        from pyml.keywords.keywords import Const
+        from .keywords.keywords import Const
         return Union[item, Const]
 
 
-TConstable = _Constable()
+TFinal = _Final()

@@ -5,7 +5,7 @@ from declare_foundation.components import BaseComponent as _Base
 
 class BaseComponent(_Base):
     
-    def _enter_extra(self):
+    def _inject_enter_code(self):
         if isinstance(self, QLayoutItem):
             # 注意: 当 self 是 QLayoutItem 实例时, 必须在 __enter__ 时期立即让父
             # 组件添加它 (父组件调用 setLayout 方法). 否则, Application 在启动时
@@ -17,7 +17,7 @@ class BaseComponent(_Base):
             assert parent_com is not None
             parent_com.setLayout(self)
     
-    def _exit_extra(self, child_com, parent_com):
+    def _inject_exit_code(self, child_com, parent_com):
         # PS: self is child_com, they are the same object
         if isinstance(self, QLayoutItem):
             return

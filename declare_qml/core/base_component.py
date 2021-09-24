@@ -1,20 +1,22 @@
-from textwrap import dedent, indent
+from textwrap import dedent
+from textwrap import indent
 
-from declare_foundation.components import BaseComponent as _BaseComponent
-from declare_foundation.context_manager import (
-    context, id_ref, parent, this
-)
+from declare_foundation.components import BaseComponent as OriginBaseComponent
 from ..properties import PropertyManager
-from ..properties.manager import adapt_key, adapt_value
+from ..properties.manager import adapt_key
+from ..properties.manager import adapt_value
 from ..typehint import *
 
 
-class BaseComponent(_BaseComponent, PropertyManager):
+class BaseComponent(OriginBaseComponent, PropertyManager):
+    children: List['BaseComponent']
+    name: str
+    
     _initialized = False
     _propagating = False
     
     def __init__(self):
-        _BaseComponent.__init__(self)
+        OriginBaseComponent.__init__(self)
         PropertyManager.__init__(self)
         
         self._propagations = set()
@@ -24,12 +26,66 @@ class BaseComponent(_BaseComponent, PropertyManager):
         
         self._initialized = True
     
+    def build(self) -> TComponent:
+        pass
+    
+    def finalize(self, offset=0) -> str:
+        """ Convert data structure into qml code. """
+        # declare custom properties
+        holder1 = []
+        for k, v in self.new_props.items():
+            k = adapt_key(k)
+            v = adapt_value(v)
+            # type_ = {
+            #     bool: 'bool',
+            #     str: 'string',
+            #     int: 'int',
+            #     float: 'real',
+            #     'alias': 'alias',
+            # }.get(type(v), 'var')
+            holder1.append(f'property {v.qtype} {k}: {v}')
+        
+        # properties
+        holder2 = []
+        for k, v in self.raw_props.items():
+            k = adapt_key(k)
+            v = adapt_value(v)
+            holder2.append(f'{k}: {v}')
+        
+        qml_code = dedent('''
+            {component} {{
+                id: {id}
+                objectName: "{object_name}"
+                
+                // CUSTOM PROPERTIES
+                {custom_properties}
+                
+                // PROPERTIES
+                {properties}
+                
+                // CHILDREN
+                {children}
+            }}
+        ''').strip().format(
+            component=self.name,
+            id=self.uid,
+            object_name=self.name.lower() + str(self.uid)[3:],
+            #   e.g. 'window_0x1_01'
+            custom_properties='\n    '.join(holder1) or '// -- NO PROPS --',
+            properties='\n    '.join(holder2) or '// -- NO PROPS --',
+            children='\n\n    '.join(
+                x.finalize(4).lstrip() for x in self.children
+            ) if self.children else '// -- NO CHILD --',
+        )
+        
+        return indent(qml_code, ' ' * offset)
+
     # def _init_raw_props(self):
     #     raise NotImplementedError
     #
     # def _init_custom_props(self):
     #     pass
-    
+
     # def __getattr__(self, item):
     #     if (
     #             isinstance(item, str) and
@@ -39,7 +95,7 @@ class BaseComponent(_BaseComponent, PropertyManager):
     #         return self.__dict__.get(item, lambda v: v)
     #     else:
     #         return self.__dict__[item]
-    
+
     # def __setattr__(self, key, value, propagate=True):
     #     # https://www.cnblogs.com/hester/articles/4767152.html
     #     # noinspection PyProtectedMember
@@ -81,7 +137,7 @@ class BaseComponent(_BaseComponent, PropertyManager):
     #             self._props['custom_props'].append(key)
     #     else:
     #         getattr(self, f'on_{key}_changed', lambda v: v)(value)
-    
+
     # def __enter__(self):
     #     """
     #     with Component() as com:
@@ -99,66 +155,3 @@ class BaseComponent(_BaseComponent, PropertyManager):
     # def __exit__(self, exc_type, exc_val, exc_tb):
     #     this.point_to(id_ref[(pid := self.uid.parent_id)])
     #     parent.point_to(id_ref[pid.parent_id] if pid is not None else None)
-    
-    def build(self) -> TComponent:
-        pass
-    
-    def finalize(self, offset=0):
-        """
-        Examples:
-            see TODO
-        """
-        # declare custom properties
-        holder1 = []
-        for k, v in self.new_props.items():
-            k = adapt_key(k)
-            v = adapt_value(v)
-            # type_ = {
-            #     bool: 'bool',
-            #     str: 'string',
-            #     int: 'int',
-            #     float: 'real',
-            #     'alias': 'alias',
-            # }.get(type(v), 'var')
-            holder1.append(f'property {v.qtype} {k}: {v}')
-        
-        # properties
-        holder2 = []
-        for k, v in self.raw_props.items():
-            k = adapt_key(k)
-            v = adapt_value(v)
-            holder2.append(f'{k}: {v}')
-        
-        qml_code = self._strip('''
-            {component} {{
-                id: {id}
-                objectName: "{object_name}"
-                
-                // CUSTOM PROPERTIES
-                {custom_properties}
-                
-                // PROPERTIES
-                {properties}
-                
-                // CHILDREN
-                {children}
-            }}
-        ''').format(
-            component=self.name,
-            id=self.uid,
-            object_name=self.name.lower() + str(self.uid)[3:],
-            #   e.g. 'window_0x1_01'
-            custom_properties='\n    '.join(holder1) or '// -- NO PROPS --',
-            properties='\n    '.join(holder2) or '// -- NO PROPS --',
-            children='\n\n    '.join(
-                x.finalize(4).lstrip() for x in self.children
-            ) if self.children else '// -- NO CHILD --',
-        )
-        
-        return indent(qml_code, ' ' * offset)
-    
-    @staticmethod
-    def _strip(block_string: str):
-        return dedent(block_string)[1:].rstrip()
-        #   `[1:]`: 去除首行 (空行)
-        #   `.rstrip()`: 去除尾部的空行和空格
