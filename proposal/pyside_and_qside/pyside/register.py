@@ -4,10 +4,11 @@ from inspect import signature
 
 from lk_logger import lk
 
-from .._typehint.register import *
+from .._typehint.pyside_pkg import *
 
 
 class PyRegister:
+    strict_mode = True
     __pyclass_holder: TPyClassHolder = defaultdict(lambda: defaultdict())
     __pyfunc_holder: TPyFuncHolder = {}
     
@@ -53,6 +54,8 @@ class PyRegister:
             return len(params)
     
     def _register(self, func, name: str, narg: int):
+        if self.strict_mode and name in self.__pyclass_holder:
+            raise Exception('Function already registered', name)
         self.__pyfunc_holder[name] = (func, narg)
     
     def _register_function(self, func, name, narg):
@@ -89,6 +92,9 @@ class PyRegister:
         '''
         method_name = method.__name__
         lk.logt('[D2601]', class_name, method_name)
+        if self.strict_mode and \
+                method_name in self.__pyclass_holder[class_name]:
+            raise Exception('Method already registered', method_name)
         self.__pyclass_holder[class_name][method_name] = (name, narg)
     
     def register(self, obj, name=''):

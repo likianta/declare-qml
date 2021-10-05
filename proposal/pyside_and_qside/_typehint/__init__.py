@@ -1,2 +1,2 @@
-from . import qmside
-from . import register
+from . import qmside_pkg
+from . import pyside_pkg
