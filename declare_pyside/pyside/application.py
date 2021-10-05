@@ -52,7 +52,7 @@ class Application(QApplication):
         
         self.engine = QQmlApplicationEngine()
         self.root = self.engine.rootContext()
-        self.qml_side_dir = xpath.abspath(f'{__file__}/../../qmside')
+        self.qml_side_dir = xpath.abspath(f'{__file__}/../../qmlside')
         self.__pyobj_holder = {}
         
         assert xpath.exists(self.qml_side_dir)

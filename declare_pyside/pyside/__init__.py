@@ -1,6 +1,6 @@
 """
 Python Side Handlers.
-See also Qt Modeling Side Handlers at `../qmside`.
+See also Qt Modeling Side Handlers at `../qmlside`.
 
 Note this package is mostly copied from my another project `lk-qtquick-scaffold`.
 """

@@ -1,5 +1,5 @@
-import QtQuick 2.15
-import LKQmSide
+import QtQuick
+import LKQmlSide
 import "./LCStyle/palette.js" as LCPalette
 import "./LCStyle/typography.js" as LCTypo
 

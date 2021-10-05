@@ -1,6 +1,6 @@
-module LKQmSide
+module LKQmlSide
 
 HotLoader       1.0     HotLoader.qml
-QmSide          1.0     QmSide.qml
+QmlSide         1.0     QmlSide.qml
 
 LayoutHelper    1.0     layout_helper.js

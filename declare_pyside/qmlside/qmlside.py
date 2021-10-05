@@ -1,19 +1,20 @@
 from textwrap import dedent
 
 from PySide6.QtCore import QObject
-from ..typehint.qmside_pkg import *
+
+from ..typehint.qmlside_pkg import *
 
 
 def setup():
-    def register_qmside(obj):
-        global qmside
-        qmside.init(obj)
+    def register_qmlside(obj):
+        global qmlside
+        qmlside.init(obj)
     
     from ..pyside import pyside
-    pyside.register(register_qmside)
+    pyside.register(register_qmlside)
 
 
-class QmSide(QObject):
+class QmlSide(QObject):
     _core: TQSideCore
     
     def init(self, qobj):
@@ -43,4 +44,4 @@ class QmSide(QObject):
         )
 
 
-qmside = QmSide()
+qmlside = QmlSide()

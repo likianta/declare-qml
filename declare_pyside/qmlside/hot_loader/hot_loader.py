@@ -14,7 +14,7 @@ class HotLoader:
     def __init__(self, cache_dirname='__declare_qml__'):
         self.cache_dirname = cache_dirname
         self.bootloader = xpath.abspath(
-            f'{__file__}/../../LKQmSide/HotLoader.qml'
+            f'{__file__}/../../LKQmlSide/HotLoader.qml'
         )
         assert xpath.exists(self.bootloader)
     
@@ -54,8 +54,8 @@ class HotLoader:
         from lk_logger import lk
         lk.logt(
             '[W2413]',
-            'The target qml locates in a different driver with `declare_qml'
-            '.qmside.LKLogger.HotLoader`, we will make a copy of "HotLoader'
+            'The target qml locates in a different driver with `declare_pyside'
+            '.qmlside.LKLogger.HotLoader`, we will make a copy of "HotLoader'
             '.qml" in target directory:\n\t{}'.format(new_bootloader),
             h='grand_parent'
         )
