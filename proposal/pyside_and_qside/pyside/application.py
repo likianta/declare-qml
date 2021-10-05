@@ -1,4 +1,4 @@
-from os.path import abspath
+import os.path as xpath
 
 from PySide6.QtCore import QObject
 from PySide6.QtQml import QQmlApplicationEngine
@@ -52,9 +52,10 @@ class Application(QApplication):
         
         self.engine = QQmlApplicationEngine()
         self.root = self.engine.rootContext()
-        self.qml_side_dir = abspath(f'{__file__}/../../qml_side')
+        self.qml_side_dir = xpath.abspath(f'{__file__}/../../qmside')
         self.__pyobj_holder = {}
         
+        assert xpath.exists(self.qml_side_dir)
         self._fine_tune()
         self._register_paths(kwargs.get('theme_dir', ''))
     
@@ -67,13 +68,13 @@ class Application(QApplication):
         # set font 'microsoft yahei ui' if platform is windows
         from platform import system
         if system() == 'Windows':
-            from PySide6.QtGui import QFont
-            self.setFont(QFont('Microsoft YaHei UI'))
+            self.setFont('Microsoft YaHei')
     
     def _register_paths(self, theme_dir: str):
-        d = self.qml_side_dir
-        self.add_import_entrance(theme_dir or abspath(f'{d}/../theme'))
-        self.add_import_entrance(f'{d}/qlogger')
+        self.add_import_entrance(self.qml_side_dir)
+        self.add_import_entrance(
+            theme_dir or xpath.abspath(f'{self.qml_side_dir}/../theme')
+        )
     
     def add_import_entrance(self, qmldir: str):
         """
@@ -118,7 +119,17 @@ class Application(QApplication):
                 case is not sensitive (you can also use lower case if you like).
                 Make sure the file content accords with QML syntax and the root
                 item should be Window.
+        
+        Notice:
+            It seems that `self.engine` cannot recognize abspath format, when
+            we use:
+                self.engine.load(<an_abspath_of_qmlfile>)
+            It will raise a network error:
+                QQmlApplicationengine failed to load component.
+            We should add a prefix 'file:///' to it to resolve this problem.
+            By the way a relative path is always safe to use.
         """
+        if xpath.isabs(qmlfile): qmlfile = 'file:///' + qmlfile
         self.engine.load(qmlfile)
         self.exec()
         #   note: do not use `sys.exit(self.exec())` here, that will cause

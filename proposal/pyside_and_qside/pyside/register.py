@@ -9,8 +9,8 @@ from .._typehint.pyside_pkg import *
 
 class PyRegister:
     strict_mode = True
-    __pyclass_holder: TPyClassHolder = defaultdict(lambda: defaultdict())
-    __pyfunc_holder: TPyFuncHolder = {}
+    _pyclass_holder: TPyClassHolder = defaultdict(lambda: defaultdict())
+    _pyfunc_holder: TPyFuncHolder = {}
     
     @staticmethod
     def _get_number_of_args(func: Callable, strip_self=False) -> TNArgs:
@@ -54,9 +54,9 @@ class PyRegister:
             return len(params)
     
     def _register(self, func, name: str, narg: int):
-        if self.strict_mode and name in self.__pyclass_holder:
+        if self.strict_mode and name in self._pyclass_holder:
             raise Exception('Function already registered', name)
-        self.__pyfunc_holder[name] = (func, narg)
+        self._pyfunc_holder[name] = (func, narg)
     
     def _register_function(self, func, name, narg):
         self._register(name, func, narg)
@@ -64,7 +64,7 @@ class PyRegister:
     def _register_instance(self, instance):
         class_name = instance.__class__.__name__
         for method_name, (name, narg) in \
-                self.__pyclass_holder[class_name].items():
+                self._pyclass_holder[class_name].items():
             #   the `name` equals to `method_name`, or an alias of `method_name`
             method = getattr(instance, method_name)
             self._register(method, name, narg)
@@ -93,9 +93,9 @@ class PyRegister:
         method_name = method.__name__
         lk.logt('[D2601]', class_name, method_name)
         if self.strict_mode and \
-                method_name in self.__pyclass_holder[class_name]:
+                method_name in self._pyclass_holder[class_name]:
             raise Exception('Method already registered', method_name)
-        self.__pyclass_holder[class_name][method_name] = (name, narg)
+        self._pyclass_holder[class_name][method_name] = (name, narg)
     
     def register(self, obj, name=''):
         """ Registering Python functions/methods to `.pyside.PySide.<namespace>`.

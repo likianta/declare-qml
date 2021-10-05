@@ -17,7 +17,7 @@ class PySide(QObject, PyRegister):
         
         See detailed docstring at `~/docs/pyside-handler-usage.md`.
         """
-        func, narg = self.__pyfunc_holder[func_name]  # narg: 'number of args'
+        func, narg = self._pyfunc_holder[func_name]  # narg: 'number of args'
         
         args = [] if args is None else (args.toVariant() or [])
         kwargs = {} if kwargs is None else (kwargs.toVariant() or {})
