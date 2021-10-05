@@ -1,5 +1,4 @@
-from typing import Callable
-from typing import Literal
+from typing import *
 
 from PySide6.QtQml import QJSValue as _QJSValue
 
