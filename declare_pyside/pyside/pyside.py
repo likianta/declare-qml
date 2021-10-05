@@ -2,7 +2,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtCore import Slot
 
 from .register import PyRegister
-from .._typehint.pyside_pkg import *
+from ..typehint.pyside_pkg import *
 
 
 class PySide(QObject, PyRegister):

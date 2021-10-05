@@ -1,7 +1,7 @@
 from textwrap import dedent
 
 from PySide6.QtCore import QObject
-from .._typehint.qmside_pkg import *
+from ..typehint.qmside_pkg import *
 
 
 def setup():
