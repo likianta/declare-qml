@@ -7,12 +7,6 @@ from .._typehint.pyside_pkg import *
 
 class PySide(QObject, PyRegister):
     
-    def __init__(self, object_name=''):
-        super().__init__()
-        from .application import app
-        self.object_name = object_name or self.__class__.__name__
-        app.register_pyobj(self, self.object_name)
-    
     @Slot(TPyFuncName, result=TQVar)
     @Slot(TPyFuncName, TQVal, result=TQVar)
     @Slot(TPyFuncName, TQVal, TQVal, result=TQVar)
@@ -41,5 +35,5 @@ class PySide(QObject, PyRegister):
                 return func(args)
 
 
-pyside = PySide(object_name='PySide')
+pyside = PySide()
 reg = pyside.register_via_decorator
