@@ -12,6 +12,7 @@ TFakeModule = _lambdex('', """
     class FakeModule:
         def __getattr__(self, item):
             return None
+    return FakeModule()
 """)()
 
 TPath = Union[_PathLike, str, bytes]

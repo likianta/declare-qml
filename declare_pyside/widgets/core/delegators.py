@@ -1,4 +1,4 @@
-from secrets import token_hex
+import re
 
 from PySide6.QtQml import QQmlProperty
 
@@ -21,13 +21,10 @@ class AbstractDelegatorExpression:
     def __init__(self, qobj):
         self.qobj = qobj
         self.expression = ''
-        
-    def __add__(self, other):
-        expression, qobj = other
-        
-    def _randomize_placeholders(self, expression: str):
-        def _gen_random_slot_name():
-            return 'x' + token_hex(8)
+    
+    # def _randomize_placeholders(self, expression: str):
+    #     def _gen_random_slot_name():
+    #         return 'x' + token_hex(8)
     
     def update(self, value: str):
         self.expression += value
@@ -44,6 +41,9 @@ class Delegator:
     def __getattr__(self, item):
         if item == 'bind':
             if self.prop.hasNotifySignal():
+                assert gstates.is_binding is False, (
+                    'The binding state is occupied by other Delegator'
+                )
                 gstates.is_binding = True
             else:
                 raise Exception(
@@ -52,18 +52,75 @@ class Delegator:
                 )
         return super().__getattribute__(item)
     
-    def __add__(self, other):
-        if gstates.is_binding:
-            if isinstance(other, AbstractDelegatorExpression):
-                return other.update(' + ')
-        
     def bind(self, abstract_prop_expression: tuple[TQObject, str]):
-        pass
+        """
+        Documents:
+            See `docs/black-magic-about-binding-mechanism.zh.md`
+            
+        Notes:
+            Trying hard to complete dynamic binding feature. You cannot use
+            this method for now.
+            If you want to dynamically bind the others' properties, try the
+            following instead:
+                # WIP
+                <item_A>.<prop>.bind(<item_B>.<prop>)
+                # Workaround
+                <item_B>.<prop_changed>.connect(
+                    lambda: <item_A>.<prop> = <item_B>.<prop>
+                )
+        """
+        # last_frame = currentframe().f_back
+        # event, participants = self._extract_frame_info(last_frame)
+        raise NotImplementedError
+    
+    @staticmethod
+    def _extract_frame_info(frame):
+        """
+        Learning:
+            source code of lk-logger
+            
+        TODO: much work to be done...
+        """
+        filename = frame.f_code.co_filename
+        lineno = frame.f_lineno
+        file = open(filename, 'r', encoding='utf-8')
+        source_line = file.read().splitlines()[lineno - 1]
+        file.close()
+        
+        assert (m := re.match(r'^ +(?:\w+\.)+\.bind\(', source_line)), '''
+            Your binding statement is too complex to analyse!
+            In current verison (v0.1.x) we can only parse format likes
+            `<some_qobj>.<property_name>.bind(<expression>)`.
+            Here's the position error happened FYI:
+                Filename: {}
+                Lineno: {}
+                Source Line: {}
+        '''.format(filename, lineno, source_line)
+        source_line_stem = source_line[m.span()[0]:]
+        
+        from lk_logger.scanner import get_all_blocks
+        from ..base_item import BaseItem
+        
+        segs = source_line_stem[1:].split(',')
+        segs[-1] = segs[-1].rstrip(', ')
+        event = ''
+        participants = []
+        locals_ = frame.f_locals()
+        for match0 in get_all_blocks(source_line_stem):
+            event = match0.fulltext.strip()
+            break
+        for match in get_all_blocks(*segs, end_mark=','):
+            obj_name, prop_name, *_ = match.fulltext.split('.')
+            #   e.g. 'btn.x' -> 'btn'
+            if obj_name in locals_:
+                obj = locals_[obj_name]
+                if isinstance(obj, BaseItem) and prop_name in obj.auth_props:
+                    participants.append(QQmlProperty(obj.qobj, prop_name))
+        
+        return event, participants
     
     def kiss(self, value):
         pass
-        
-    
 
 
 class PrimePropDelegator(Delegator):
@@ -87,12 +144,7 @@ class PrimePropDelegator(Delegator):
     
     def bind(self, prop: QQmlProperty, func=None):
         assert gstates.is_binding
-        
-        
-        
-        x = QQmlProperty()
-        x.connectNotifySignal()
-        
+        # TODO: see `Delegator.bind`
         gstates.is_binding = False
     
     def kiss(self, value):
@@ -101,4 +153,8 @@ class PrimePropDelegator(Delegator):
 
 
 class SubprimePropDelegator(Delegator):
-    pass
+    
+    def bind(self, prop: QQmlProperty, func=None):
+        assert gstates.is_binding
+        # TODO: see `Delegator.bind`
+        gstates.is_binding = False
