@@ -1,7 +1,7 @@
 from os import PathLike as _PathLike
 from typing import *
 
-from . import pyside_pkg
-from . import qmlside_pkg
+from . import pyside
+from . import qmlside
 
 TPath = Union[_PathLike, str, bytes]

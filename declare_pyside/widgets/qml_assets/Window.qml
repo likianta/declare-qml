@@ -5,5 +5,7 @@ import LKQmlSide
 Window {
     id: root
 
-
+    QmlSide {
+        id: qmlside
+    }
 }

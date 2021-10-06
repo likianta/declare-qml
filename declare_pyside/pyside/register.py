@@ -4,7 +4,7 @@ from inspect import signature
 
 from lk_logger import lk
 
-from ..typehint.pyside_pkg import *
+from ..typehint.pyside import *
 
 
 class PyRegister:

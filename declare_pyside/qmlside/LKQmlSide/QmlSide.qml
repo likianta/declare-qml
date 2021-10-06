@@ -1,13 +1,14 @@
-import QtQuick 2.15
+import QtQuick
 
 Item {
     id: root
+    objectName: 'QmlSide'
 
-    function connect_prop(s_obj, s_prop, t_obj, t_prop) {
+    function connectProp(s_obj, s_prop, t_obj, t_prop) {
         eval(`t_obj.${t_prop} = Qt.binding(() => s.obj.${s_prop})`)
     }
 
-    function connect_func(s_obj, s_prop, func_id, participants) {
+    function connectFunc(s_obj, s_prop, func_id, participants) {
         eval(`
             s_obj.${s_prop} = Qt.binding(
                 () => PySide.eval('${func_id}', ${participants})
@@ -15,11 +16,20 @@ Item {
         `)
     }
 
-    function eval_in_js(code, args) {
+    function createComponent(qmlfile) {
+        return Qt.createComponent(qmlfile)
+    }
+
+    function createObject(component, container) {
+        return component.createObject(container)
+    }
+
+    function evalJs(code, args) {
         eval(code)
     }
 
-    Component.onCompleted: {
-        PySide.call('__register_qside_object', root)
-    }
+    // Component.onCompleted: {
+    //     console.log('register qmlside object')
+    //     pyside.call('__register_qmlside_object', root)
+    // }
 }

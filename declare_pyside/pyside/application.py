@@ -5,24 +5,26 @@ from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQml import QQmlContext
 from PySide6.QtWidgets import QApplication
 
+from ..path_model import qmlside_dir
+from ..path_model import theme_dir
 
-class Application(QApplication):
+
+class _Application(QApplication):
     engine: QQmlApplicationEngine
     root: QQmlContext
-    qml_side_dir: str
     
     # the holder is made for preventing the objects which were registered to
     # qml side from being recycled by python garbage collector incorrectly.
     __pyobj_holder: dict[str, QObject]
     
-    def __init__(self, app_name='Declare QML Demo', **kwargs):
+    def __init__(self, app_name='Declare PySide Demo', **kwargs):
         """
         Args:
             app_name: str
                 Set application name now or later by calling `Application
                 .set_app_name(...)`.
             kwargs:
-                organization: str['lib.declare_qml']
+                organization: str['lib.declare_pyside']
                     Set an organization name, to avoid error info when we use
                     `QtQuick.Dialogs.FileDialog`.
                     Note: if no organization name set, the error message shows:
@@ -48,16 +50,17 @@ class Application(QApplication):
         super().__init__()
         
         self.setApplicationName(app_name)
-        self.setOrganizationName(kwargs.get('organization', 'lib.declare_qml'))
+        self.setOrganizationName(kwargs.get(
+            'organization', 'lib.declare_pyside'
+        ))
         
         self.engine = QQmlApplicationEngine()
         self.root = self.engine.rootContext()
-        self.qml_side_dir = xpath.abspath(f'{__file__}/../../qmlside')
         self.__pyobj_holder = {}
         
-        assert xpath.exists(self.qml_side_dir)
+        assert xpath.exists(qmlside_dir)
         self._fine_tune()
-        self._register_paths(kwargs.get('theme_dir', ''))
+        self._register_paths(kwargs.get('theme_dir', theme_dir))
     
     def set_app_name(self, name: str):
         # just made a consistent snake-case function alias for external caller,
@@ -71,10 +74,8 @@ class Application(QApplication):
             self.setFont('Microsoft YaHei')
     
     def _register_paths(self, theme_dir: str):
-        self.add_import_entrance(self.qml_side_dir)
-        self.add_import_entrance(
-            theme_dir or xpath.abspath(f'{self.qml_side_dir}/../theme')
-        )
+        self.add_import_entrance(qmlside_dir)
+        self.add_import_entrance(theme_dir)
     
     def add_import_entrance(self, qmldir: str):
         """
@@ -84,7 +85,7 @@ class Application(QApplication):
                 letter shoule be capitalized), the subfolder should include a
                 file named 'qmldir' (no suffix with it).
                 See examples:
-                    ../qml_side/qlogger (includes 'LKLogger')
+                    ../qmlside/qlogger (includes 'LKQmlSide')
                     ../../theme (includes 'LightClean')
         """
         self.engine.addImportPath(qmldir)
@@ -142,4 +143,29 @@ class Application(QApplication):
     #   -startapps+&cd=1&hl=zh-CN&ct=clnk&gl=sg
 
 
-app = Application()
+class Application:
+    # _appcore: _Application
+    
+    def __init__(self, app_name='', **kwargs):
+        if app_name:
+            app.setApplicationName(app_name)
+        if x := kwargs.get('organization'):
+            app.setOrganizationName(x)
+        if x := kwargs.get('theme_dir'):
+            app.add_import_entrance(x)
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+        # from declare_foundation.context_manager import this
+        # lk.logt('[D1432]', this)
+        # self.start(this.represents.qmlfile)
+    
+    @staticmethod
+    def start(qmlfile):
+        app.start(qmlfile)
+
+
+app = _Application()
