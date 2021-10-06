@@ -1,55 +1,75 @@
 from PySide6.QtQml import QQmlComponent
-from lk_logger import lk
+from PySide6.QtQml import QQmlProperty
 
 from declare_foundation.context_manager import Context
+from .core.authorized_props import AuthorizedProps
 from ..pyside import app
 from ..qmlside import qmlside
 from ..typehint.qmlside import *
 
 
 class BaseItem(Context):
+    auth_props: tuple[str]
+    component: TComponent
     parent: 'BaseItem'
     qmlfile: TQmlFile
-    
-    component: TComponent
     qobj: TQObject
     
     def __init__(self):
         super().__init__()
+        self._init_authorized_props()
         self.component = QQmlComponent(app.engine, self.qmlfile)
-        lk.logt('[D5904]', self.component)
+    
+    def _init_authorized_props(self):
+        """
+        References:
+            https://stackoverflow.com/questions/2611892/how-to-get-the-parents
+                -of-a-python-class
+        """
+        # trick: search `self.__class__.__bases__` from end to start. this is a
+        #   little faster to find the target baseclass because usually we like
+        #   putting `class:AuthorizedProps` in the end of `self.__class__
+        #   .__bases__`.
+        for cls in reversed(self.__class__.__bases__):
+            # lk.logt('[D5835]', cls.__name__)
+            if issubclass(cls, AuthorizedProps):
+                self.auth_props = cls.get_authorized_props()
+                return
+        else:
+            if (classname := self.__class__.__name__) != 'BaseItem':
+                raise Exception('Widget doesn\'t inherit `class:AuthProps`',
+                                classname)
     
     def __enter__(self):
         super().__enter__()
-        
         self.qobj = self.create_object()
-        lk.logt('[D0131]', self.qobj)
-        
-        # from ..qmlside import qmlside
-        # txt1 = qmlside._core.createObject(self.component, self.parent.qobj)
-        # lk.loga(txt1)
-        # lk.logp(txt1.property('text'),
-        #         txt1.property('width'),
-        #         txt1.property('height'),
-        #         txt1.parent())
-        # txt1.setProperty('text', 'Hello World (TxT1)')
-        
-        lk.loga(self.qobj.property('text'))
-        self.qobj.setProperty('text', 'hello')
-        lk.loga(self.qobj.property('text'))
-        lk.loga(self.parent)
-        lk.loga(self.qobj.parent())
-        lk.loga(self.qobj.parent().objectName())
         return self
     
-    # def __setattr__(self, key, value):
-    #     pass
+    def __setattr__(self, key, value):
+        if key == 'auth_props':
+            super().__setattr__(key, value)
+            return
+        
+        if key in self.auth_props:
+            prop = QQmlProperty(self.qobj, key)
+            prop.write(value)
+            # self.qobj.setProperty(key, value)
+        else:
+            super().__setattr__(key, value)
     
-    # def __getattr__(self, item):
-    #     if item in self.__dict__:
-    #         return self.__dict__[item]
-    #     else:
-    #         return self.qobj.property(item)
+    def __getattr__(self, item):
+        if item == 'auth_props':
+            return getattr(super(), 'auth_props', ())
+        
+        if item in self.auth_props:
+            prop = QQmlProperty(self.qobj, item)
+            return prop.read()
+            # return self.qobj.property(item)
+        else:
+            # https://stackoverflow.com/questions/3278077/difference-between
+            #   -getattr-vs-getattribute
+            # return self.__dict__[item]
+            return super().__getattribute__(item)
     
     def create_object(self) -> TQObject:
         """
