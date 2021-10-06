@@ -12,6 +12,24 @@
 
 下面两张图分别展示了命令式语法 (左图) 和声明式语法 (右图) 的表现方式:
 
+[TODO]
+
+**2. 健全的类型提示系统**
+
+[TODO]
+
+**3. 调用方式的优化**
+
+[TODO]
+
+**4. 热重载**
+
+[TODO]
+
+# 快速开始
+
+`declare-pyside` 的组件基于 QML 组件生成. 如果您之前是 QML 开发者, 那么这个库的上手难度会小很多.
+
 ```py
 from declare_pyside import *
 from declare_pyside.widgets import *
@@ -50,23 +68,5 @@ with Application() as app:
                 txt1.font.pixel_size += 1
             """))
 ```
-
-[TODO]
-
-**2. 健全的类型提示系统**
-
-[TODO]
-
-**3. 调用方式的优化**
-
-[TODO]
-
-**4. 热重载**
-
-[TODO]
-
-# 快速开始
-
-`declare-pyside` 的组件基于 QML 组件生成. 如果您之前是 QML 开发者, 那么这个库的上手难度会小很多.
 
 [TODO]

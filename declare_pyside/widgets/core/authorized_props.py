@@ -1,7 +1,11 @@
-def _get_authorized_props(cls) -> str:
-    for x in cls.__annotations__:
-        if not x.startswith('_'):
-            yield x
+from .delegators import *
+from ...typehint.widgets_support import *
+
+
+def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
+    for k, v in cls.__annotations__.items():
+        if not k.startswith('_'):
+            yield k, v
 
 
 class AuthorizedProps:
@@ -23,20 +27,29 @@ class AuthorizedProps:
     """
     
     @classmethod
-    def get_authorized_props(cls) -> tuple[str, ...]:
-        out = []
-        temp_cls = cls
-        while temp_cls.__name__ != 'AuthorizedProps':
-            assert issubclass(temp_cls, AuthorizedProps)
-            out.extend(_get_authorized_props(temp_cls))
-            temp_cls = temp_cls.__base__
-        return tuple(out)
+    def get_authorized_props(cls) -> TAuthProps:
+        out = {}
+        tmp_cls = cls
+        while tmp_cls.__name__ != 'AuthorizedProps':
+            assert issubclass(tmp_cls, AuthorizedProps)
+            out.update(_get_authorized_props(tmp_cls))
+            tmp_cls = tmp_cls.__base__
+        return out
 
 
-class TextProps(AuthorizedProps):
-    anchors: object
+class ItemProps(AuthorizedProps):
+    # TODO: use blueprint to generate all qml types.
+    anchors: SubprimePropDelegator
     height: float
-    text: str
     width: float
     x: float
     y: float
+
+
+class ButtonProps(ItemProps):
+    text: str
+    background: object
+
+
+class TextProps(ItemProps):
+    text: str

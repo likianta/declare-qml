@@ -3,13 +3,15 @@ from PySide6.QtQml import QQmlProperty
 
 from declare_foundation.context_manager import Context
 from .core.authorized_props import AuthorizedProps
+from .core.delegators import Delegator
 from ..pyside import app
 from ..qmlside import qmlside
 from ..typehint.qmlside import *
+from ..typehint.widgets_support import *
 
 
 class BaseItem(Context):
-    auth_props: tuple[str]
+    auth_props: TAuthProps
     component: TComponent
     parent: 'BaseItem'
     qmlfile: TQmlFile
