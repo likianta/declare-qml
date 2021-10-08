@@ -3,12 +3,12 @@ from typing import *
 
 from PySide6.QtCore import QObject as _QObject
 from PySide6.QtQml import QQmlComponent as _QQmlComponent
+from PySide6.QtQml import QQmlProperty as _QQmlProperty
 from PySide6.QtQuick import QQuickItem as _QQuickItem
 
 TComponent = _QQmlComponent
 TQObject = Union[_QObject, _QQuickItem]
-# TQItem = _QQuickItem
-
+TProperty = _QQmlProperty
 TPropName: TypeAlias = str
 
 TSender = tuple[TQObject, TPropName]
@@ -21,7 +21,7 @@ TComponentCache = dict[TQmlFile, TComponent]
 def _eval_js(_: str, __: list[TQObject]): pass
 
 
-def _create_component(_: str) -> 'TComponent': pass
+def _create_component(_: str) -> TComponent: pass
 
 
 def _create_object(_: TComponent, __: TQObject) -> TQObject:

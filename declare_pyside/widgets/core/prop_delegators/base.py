@@ -1,9 +1,11 @@
 import re
+from secrets import token_hex
 
 from PySide6.QtQml import QQmlProperty
 
-from ...black_magic import gstates
-from ...typehint.qmlside import *
+from .typehint import *
+from ....pyside import pyside
+from ....qmlside import qmlside
 
 """ what-is-prime-delegators-and-subprime-delegators.zh.md
 
@@ -14,24 +16,10 @@ y 等; `SubprimePropDelegator` 用于代理具有次级属性的 qml 属性, 例
 """
 
 
-class AbstractDelegatorExpression:
+class PropDelegator:
     qobj: TQObject
-    expression: str
-    
-    def __init__(self, qobj):
-        self.qobj = qobj
-        self.expression = ''
-    
-    # def _randomize_placeholders(self, expression: str):
-    #     def _gen_random_slot_name():
-    #         return 'x' + token_hex(8)
-    
-    def update(self, value: str):
-        self.expression += value
-        return self.expression
-
-
-class Delegator:
+    name: TPropName
+    prop: TProperty
     
     def __init__(self, qobj: TQObject, name: TPropName):
         self.qobj = qobj
@@ -40,23 +28,34 @@ class Delegator:
     
     def __getattr__(self, item):
         if item == 'bind':
-            if self.prop.hasNotifySignal():
-                assert gstates.is_binding is False, (
-                    'The binding state is occupied by other Delegator'
-                )
-                gstates.is_binding = True
-            else:
-                raise Exception(
-                    'Property not bindable!',
-                    self.qobj, self.name, self.prop.read()
-                )
+            raise NotImplemented('Binding method is not ready to use!')
+            # if self.prop.hasNotifySignal():
+            #     assert gstates.is_binding is False, (
+            #         'The binding state is occupied by other Delegator'
+            #     )
+            #     gstates.is_binding = True
+            # else:
+            #     raise Exception(
+            #         'Property not bindable!',
+            #         self.qobj, self.name, self.prop.read()
+            #     )
         return super().__getattribute__(item)
+    
+    def read(self):
+        return self.prop.read()
+    
+    def write(self, value):
+        self.prop.write(value)
+    
+    def kiss(self, value):
+        # TODO: check whether `value` type immutable
+        self.prop.write(value)
     
     def bind(self, abstract_prop_expression: tuple[TQObject, str]):
         """
         Documents:
             See `docs/black-magic-about-binding-mechanism.zh.md`
-            
+
         Notes:
             Trying hard to complete dynamic binding feature. You cannot use
             this method for now.
@@ -71,15 +70,15 @@ class Delegator:
         """
         # last_frame = currentframe().f_back
         # event, participants = self._extract_frame_info(last_frame)
-        raise NotImplementedError
+        raise NotImplemented
     
     @staticmethod
     def _extract_frame_info(frame):
         """
         Learning:
             source code of lk-logger
-            
-        TODO: much work to be done...
+
+        TODO: much work (unittest & optimization) need to be done...
         """
         filename = frame.f_code.co_filename
         lineno = frame.f_lineno
@@ -99,7 +98,7 @@ class Delegator:
         source_line_stem = source_line[m.span()[0]:]
         
         from lk_logger.scanner import get_all_blocks
-        from ..base_item import BaseItem
+        from ...base_item import BaseItem  # FIXME: not a good way
         
         segs = source_line_stem[1:].split(',')
         segs[-1] = segs[-1].rstrip(', ')
@@ -118,43 +117,28 @@ class Delegator:
                     participants.append(QQmlProperty(obj.qobj, prop_name))
         
         return event, participants
+
+
+class PrimePropDelegator(PropDelegator):
+    pass
+
+
+class SubprimePropDelegator(PropDelegator):
+    qobj_id: str  # new attr
     
-    def kiss(self, value):
-        pass
-
-
-class PrimePropDelegator(Delegator):
+    def __init__(self, qobj: TQObject, name: TPropName):
+        super().__init__(qobj, name)
+        self.qobj_id = 'qobj_{}'.format(token_hex(4))  # random id
     
     def __getattr__(self, item):
-        if item == 'bind':
-            if self.prop.hasNotifySignal():
-                gstates.is_binding = True
-            else:
-                raise Exception('Property not bindable!',
-                                self.name, self.prop.read())
-        return super().__getattribute__(item)
-    
-    def read(self):
-        if gstates.is_binding:
-            return self.prop
-        return self.prop.read()
-    
-    def write(self, value):
-        self.prop.write(value)
-    
-    def bind(self, prop: QQmlProperty, func=None):
-        assert gstates.is_binding
-        # TODO: see `Delegator.bind`
-        gstates.is_binding = False
-    
-    def kiss(self, value):
-        # TODO: check whether `value` type immutable
-        self.prop.write(value)
+        if isinstance(item, SubprimePropDelegator):
+            qmlside.create_qobject()  # TODO
+        else:
+            return super().__getattribute__(item)
 
 
-class SubprimePropDelegator(Delegator):
-    
-    def bind(self, prop: QQmlProperty, func=None):
-        assert gstates.is_binding
-        # TODO: see `Delegator.bind`
-        gstates.is_binding = False
+def adapt_delegator(qobj, name, type_: TConstructor) -> TDelegator:
+    if type_ is SubprimePropDelegator:
+        return SubprimePropDelegator(qobj, name)
+    else:
+        return PrimePropDelegator(qobj, name)

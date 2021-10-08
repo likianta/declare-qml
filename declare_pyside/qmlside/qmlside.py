@@ -28,6 +28,9 @@ class QmlSide(QObject):
     def init_core(self, qobj):
         self._core = qobj
     
+    def bind(self, target, participants, expression):
+        pass
+    
     def connect_prop(self, r: TReceptor, s: TSender):
         pass
     

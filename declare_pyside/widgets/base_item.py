@@ -3,75 +3,45 @@ from PySide6.QtQml import QQmlProperty
 
 from declare_foundation.context_manager import Context
 from .core.authorized_props import AuthorizedProps
-from .core.delegators import Delegator
+from .core.authorized_props import QPROPS
+from .core.prop_delegators import adapt_delegator
 from ..pyside import app
 from ..qmlside import qmlside
 from ..typehint.qmlside import *
-from ..typehint.widgets_support import *
 
 
-class BaseItem(Context):
-    auth_props: TAuthProps
+class BaseItem(Context, AuthorizedProps):
     component: TComponent
-    parent: 'BaseItem'
+    parent: Optional['BaseItem']
     qmlfile: TQmlFile
     qobj: TQObject
     
     def __init__(self):
-        super().__init__()
-        self._init_authorized_props()
+        Context.__init__(self)
+        AuthorizedProps.__init__(self)
         self.component = QQmlComponent(app.engine, self.qmlfile)
-    
-    def _init_authorized_props(self):
-        """
-        References:
-            https://stackoverflow.com/questions/2611892/how-to-get-the-parents
-                -of-a-python-class
-        """
-        # trick: search `self.__class__.__bases__` from end to start. this is a
-        #   little faster to find the target baseclass because usually we like
-        #   putting `class:AuthorizedProps` in the end of `self.__class__
-        #   .__bases__`.
-        for cls in reversed(self.__class__.__bases__):
-            # lk.logt('[D5835]', cls.__name__)
-            if issubclass(cls, AuthorizedProps):
-                self.auth_props = cls.get_authorized_props()
-                return
-        else:
-            if (classname := self.__class__.__name__) != 'BaseItem':
-                raise Exception('Widget doesn\'t inherit `class:AuthProps`',
-                                classname)
     
     def __enter__(self):
         super().__enter__()
         self.qobj = self.create_object()
         return self
     
+    def __getprop__(self, name: TPropName):
+        type_ = self._qprops[name]
+        prop_delegator = adapt_delegator(self.qobj, name, type_)
+        return prop_delegator
+    
     def __setattr__(self, key, value):
-        if key == 'auth_props':
+        if key == QPROPS:
             super().__setattr__(key, value)
             return
         
-        if key in self.auth_props:
+        if key in self._qprops:
             prop = QQmlProperty(self.qobj, key)
             prop.write(value)
             # self.qobj.setProperty(key, value)
         else:
             super().__setattr__(key, value)
-    
-    def __getattr__(self, item):
-        if item == 'auth_props':
-            return getattr(super(), 'auth_props', ())
-        
-        if item in self.auth_props:
-            prop = QQmlProperty(self.qobj, item)
-            return prop.read()
-            # return self.qobj.property(item)
-        else:
-            # https://stackoverflow.com/questions/3278077/difference-between
-            #   -getattr-vs-getattribute
-            # return self.__dict__[item]
-            return super().__getattribute__(item)
     
     def create_object(self) -> TQObject:
         """

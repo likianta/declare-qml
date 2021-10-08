@@ -1,11 +1,7 @@
-from .delegators import *
+from .prop_delegators import *
 from ...typehint.widgets_support import *
 
-
-def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
-    for k, v in cls.__annotations__.items():
-        if not k.startswith('_'):
-            yield k, v
+QPROPS = '_qprops'
 
 
 class AuthorizedProps:
@@ -25,31 +21,81 @@ class AuthorizedProps:
         [2]: `<child_class>.<classmethod:get_authorized_props>.<while_loop>
              .<code:assert>`
     """
+    # this is a special attribute that its name must be prefixed with
+    # underscore. otherwise it will puzzle `<globals>._get_authorized_props
+    # .<code:'if not k.startswith('_')'>`.
+    _qprops: TAuthProps
+    
+    def __init__(self):
+        self._init_authorized_props()
+    
+    def _init_authorized_props(self):
+        """
+        References:
+            https://stackoverflow.com/questions/2611892/how-to-get-the-parents
+                -of-a-python-class
+        """
+        if self.__class__ is AuthorizedProps:
+            raise Exception('This method should be used in subclasses of '
+                            '`AuthorizedProps`!')
+        # trick: search `self.__class__.__bases__` by reversed sequence. this
+        #   can be a little faster to find the target baseclass because usually
+        #   we like putting `class:AuthorizedProps` in the end of `self
+        #   .__class__.__bases__`.
+        for cls in reversed(self.__class__.__bases__):
+            # lk.logt('[D5835]', cls.__name__)
+            if issubclass(cls, AuthorizedProps):
+                self._qprops = cls._get_authorized_props()
+                return
     
     @classmethod
-    def get_authorized_props(cls) -> TAuthProps:
+    def _get_authorized_props(cls) -> TAuthProps:
         out = {}
         tmp_cls = cls
-        while tmp_cls.__name__ != 'AuthorizedProps':
-            assert issubclass(tmp_cls, AuthorizedProps)
+        # # while tmp_cls is not AuthorizedProps:
+        # #     assert issubclass(tmp_cls, AuthorizedProps)
+        while issubclass(tmp_cls, AuthorizedProps):  # two steps in one
             out.update(_get_authorized_props(tmp_cls))
             tmp_cls = tmp_cls.__base__
         return out
+    
+    def __getattr__(self, item):
+        if item == QPROPS:
+            return getattr(super(), QPROPS, ())
+        
+        # https://stackoverflow.com/questions/3278077/difference-between-getattr
+        # -vs-getattribute
+        if item in self._qprops:
+            return super().__getattribute__('__getprop__')(item)
+        else:
+            return super().__getattribute__(item)
+    
+    def __getprop__(self, name):
+        # see typical implementation at `..base_item.BaseItem.__getprop__`.
+        raise NotImplemented
 
+
+def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
+    for k, v in cls.__annotations__.items():
+        if not k.startswith('_'):
+            yield k, v
+
+
+# ------------------------------------------------------------------------------
+# TODO: the following can be generated from blueprint
 
 class ItemProps(AuthorizedProps):
-    # TODO: use blueprint to generate all qml types.
     anchors: SubprimePropDelegator
-    height: float
-    width: float
-    x: float
-    y: float
+    height: Union[float, PrimePropDelegator]
+    width: Union[float, PrimePropDelegator]
+    x: Union[float, PrimePropDelegator]
+    y: Union[float, PrimePropDelegator]
 
 
 class ButtonProps(ItemProps):
-    text: str
-    background: object
+    text: Union[str, PrimePropDelegator]
+    background: Union[object, PrimePropDelegator]
 
 
 class TextProps(ItemProps):
-    text: str
+    text: Union[str, PrimePropDelegator]
