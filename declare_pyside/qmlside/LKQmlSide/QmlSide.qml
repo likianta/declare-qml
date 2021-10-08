@@ -4,11 +4,17 @@ Item {
     id: root
     objectName: 'QmlSide'
 
-    function connectProp(s_obj, s_prop, t_obj, t_prop) {
-        eval(`t_obj.${t_prop} = Qt.binding(() => s.obj.${s_prop})`)
+    function bind(t_obj, t_propName, s_obj, s_propName) {
+        console.log('call qmlbind', t_obj, t_propName, s_obj, s_propName)
+        eval(`t_obj.${t_propName} = Qt.binding(() => s_obj.${s_propName})`)
     }
 
-    function connectFunc(s_obj, s_prop, func_id, participants) {
+    // TEST
+    function test_bind(t_prop, s_prop) {
+        t_prop = Qt.binding(() => s_prop)
+    }
+
+    function connect_func(s_obj, s_prop, func_id, participants) {
         eval(`
             s_obj.${s_prop} = Qt.binding(
                 () => PySide.eval('${func_id}', ${participants})
@@ -16,15 +22,15 @@ Item {
         `)
     }
 
-    function createComponent(qmlfile) {
+    function create_component(qmlfile) {
         return Qt.createComponent(qmlfile)
     }
 
-    function createObject(component, container) {
+    function create_object(component, container) {
         return component.createObject(container)
     }
 
-    function evalJs(code, args) {
+    function eval_js(code, args) {
         eval(code)
     }
 

@@ -1,3 +1,7 @@
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QFont
+from PySide6.QtQuick import QQuickItem
+
 from .prop_delegators import *
 from ...typehint.widgets_support import *
 
@@ -85,17 +89,29 @@ def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
 # TODO: the following can be generated from blueprint
 
 class ItemProps(AuthorizedProps):
-    anchors: SubprimePropDelegator
-    height: Union[float, PrimePropDelegator]
-    width: Union[float, PrimePropDelegator]
-    x: Union[float, PrimePropDelegator]
-    y: Union[float, PrimePropDelegator]
+    anchors: PropDelegatorC
+    height: Union[float, PropDelegatorA]
+    width: Union[float, PropDelegatorA]
+    x: Union[float, PropDelegatorA]
+    y: Union[float, PropDelegatorA]
+    z: Union[float, PropDelegatorA]
 
 
 class ButtonProps(ItemProps):
-    text: Union[str, PrimePropDelegator]
-    background: Union[object, PrimePropDelegator]
+    text: Union[str, PropDelegatorA]
+    background: Union[object, PropDelegatorA]
+
+
+class RectangleProps(ItemProps):
+    background: Union[QQuickItem, PropDelegatorA]
+    border: Union[QObject, PropDelegatorB]
 
 
 class TextProps(ItemProps):
-    text: Union[str, PrimePropDelegator]
+    font: Union[QFont, PropDelegatorA]
+    text: Union[str, PropDelegatorA]
+
+
+class WindowProps(ItemProps):
+    color: Union[str, PropDelegatorA]
+    visible: Union[bool, PropDelegatorA]

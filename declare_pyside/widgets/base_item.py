@@ -1,5 +1,4 @@
 from PySide6.QtQml import QQmlComponent
-from PySide6.QtQml import QQmlProperty
 
 from declare_foundation.context_manager import Context
 from .core.authorized_props import AuthorizedProps
@@ -37,9 +36,17 @@ class BaseItem(Context, AuthorizedProps):
             return
         
         if key in self._qprops:
-            prop = QQmlProperty(self.qobj, key)
-            prop.write(value)
+            # A
             # self.qobj.setProperty(key, value)
+            
+            # B
+            # prop = QQmlProperty(self.qobj, key)
+            # prop.write(value)
+            
+            # C
+            type_ = self._qprops[key]
+            prop_delegator = adapt_delegator(self.qobj, key, type_)
+            prop_delegator.write(value)
         else:
             super().__setattr__(key, value)
     

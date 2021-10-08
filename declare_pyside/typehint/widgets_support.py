@@ -11,8 +11,7 @@ else:
 # `declare_pyside/widgets/core/delegators.py`
 
 TPrimitive = Union[None, bool, float, int, str]
-TDelegator = Union[_delegators.PrimePropDelegator,
-                   _delegators.SubprimePropDelegator]
+TDelegator = _delegators.PropDelegator
 TConstructor = Union[TPrimitive, TDelegator]
 
 # ------------------------------------------------------------------------------

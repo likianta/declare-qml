@@ -18,22 +18,21 @@ TQmlFile = Union[_PathLike, str]
 TComponentCache = dict[TQmlFile, TComponent]
 
 
-def _eval_js(_: str, __: list[TQObject]): pass
-
-
-def _create_component(_: str) -> TComponent: pass
-
-
-def _create_object(_: TComponent, __: TQObject) -> TQObject:
-    """ (component, container) """
-
-
-def _somefunc(*_, **__) -> Any: pass
-
-
 class TQSideCore:
     # `./qml/QSide.qml`
-    evalJs = _eval_js
-    connectProp = _somefunc
-    createComponent = _create_component
-    createObject = _create_object
+    
+    @staticmethod
+    def bind(t_obj: TQObject, t_prop_name: TPropName,
+             s_obj: TQObject, s_prop_name: TPropName): pass
+    
+    @staticmethod
+    def connect_prop(*_, **__) -> Any: pass
+    
+    @staticmethod
+    def create_component(_: str) -> TComponent: pass
+    
+    @staticmethod
+    def create_object(component: TComponent, container: TQObject) -> TQObject: pass
+    
+    @staticmethod
+    def eval_js(code: str, locals_: list[TQObject]): pass

@@ -3,7 +3,9 @@ from textwrap import dedent
 
 from PySide6.QtCore import QObject
 from PySide6.QtQml import QQmlComponent
+from lk_logger import lk
 
+from .. import path_model
 from ..pyside import app
 from ..pyside import pyside
 from ..typehint.qmlside import *
@@ -13,7 +15,6 @@ def setup():
     def register_qmlside(obj: TQObject):
         global qmlside
         qmlside.init_core(obj)
-        from lk_logger import lk
         lk.logt('[I0557]', 'registered qmlside object', obj.objectName())
     
     from ..pyside import pyside
@@ -22,6 +23,7 @@ def setup():
 
 
 class QmlSide(QObject):
+    qmlfile = path_model.lk_qml_side_dir + '/QmlSide.qml'
     _core: TQSideCore
     _component_cache = {}  # type: TComponentCache
     
@@ -30,6 +32,12 @@ class QmlSide(QObject):
     
     def bind(self, target, participants, expression):
         pass
+    
+    def bind_prop(self,
+                  t_obj: TQObject, t_prop_name: TPropName,
+                  s_obj: TQObject, s_prop_name: TPropName):
+        lk.logt('[D5121]', t_obj, t_prop_name, s_obj, s_prop_name)
+        self._core.bind(t_obj, t_prop_name, s_obj, s_prop_name)
     
     def connect_prop(self, r: TReceptor, s: TSender):
         pass
@@ -42,7 +50,7 @@ class QmlSide(QObject):
         
         args = [r[0], [s[0] for s in s_group]]
         
-        self._core.evalJs(
+        self._core.eval_js(
             dedent('''
                 {r_obj}.{r_prop} = Qt.binding(
                     () => PySide.call({func_id}, {s_group})
@@ -73,11 +81,11 @@ class QmlSide(QObject):
     def create_qobject(self,
                        component: TComponent,
                        container: TQObject) -> TQObject:
-        qobj = self._core.createObject(component, container)
-        #   the component type is TComponent, but when `self._core.createObject`
-        #   -- which is defined in `declare_pyside/qmlside/LKQmlSide/QmlSide
-        #   .qml:<function:createObject>` -- is called, TComponent will be
-        #   implicitly translated to `QML:Component` type.
+        qobj = self._core.create_object(component, container)
+        #   the component type is TComponent, but when `self._core
+        #   .create_object` -- which is defined in `declare_pyside/qmlside
+        #   /LKQmlSide/QmlSide.qml:<function:create_object>` -- is called,
+        #   TComponent will be implicitly translated to `QML:Component` type.
         return qobj
 
 
