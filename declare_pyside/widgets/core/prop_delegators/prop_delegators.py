@@ -36,14 +36,17 @@ class PropDelegator:
         """
         Examples:
             xxx.name = 'xxx'
-            xxx.??? = 'xxx'
+            xxx.width = 12
         """
         if key.startswith('__') or key in _REGISTERED_NAMES:
             super().__setattr__(key, value)
         else:
-            self.write(value)
+            self.__set_subprop__(key, value)
     
     def __get_subprop__(self, name: TPropName):
+        raise NotImplementedError
+    
+    def __set_subprop__(self, name, value):
         raise NotImplementedError
     
     def read(self):
@@ -126,69 +129,69 @@ class PropDelegator:
 class PropDelegatorA(PropDelegator):
     
     def __get_subprop__(self, name):
+        # e.g. width.color -> error
         raise AttributeError(
-            'This property ({}) doesn\'t support to access a secondary '
-            'property from it.'.format(self.name), 
-            'Did you mean `PropDelegatorB` or `PropDelegatorC`?', name
+            'Illegal property: {}.{}!'.format(self.name, name),
+            'This property ({}) doesn\'t support accessing secondary property '
+            'from it.'.format(self.name),
+            'Did you mean `PropDelegatorB` or `PropDelegatorC`?'
+        )
+    
+    def __set_subprop__(self, name, value):
+        # e.g. width.color = '#FFFFFF'
+        raise AttributeError(
+            'Illegal property: {}.{}!'.format(self.name, name),
+            'This property ({}) doesn\'t support setting a secondary property '
+            'value to it.'.format(self.name),
+            'Did you mean `PropDelegatorB` or `PropDelegatorC`?'
         )
 
 
 class PropDelegatorB(PropDelegator):
     
     def __get_subprop__(self, name) -> PropDelegatorA:
+        # e.g. border.width -> PropDelegator(<border.width>)
         return PropDelegatorA(self.prop.read(), name)
-        # return QQmlProperty(self.prop.read(), name)
-        #                   ^^^^^^^^^^^^^^^^ QObject
+    
+    def __set_subprop__(self, name, value):
+        prop = self.__get_subprop__(name)
+        prop.write(value)
 
 
 class PropDelegatorC(PropDelegator):
-    sub_name: TPropName
-    
-    def __getattribute__(self, item):
-        if item == 'sub_name':
-            return object.__getattribute__(self, item)
-        else:
-            return super().__getattr__(item)
-    
-    def __get_subprop__(self, name):
-        return self
-    
-    class PropBroker:
+    class QmlSideProp:
         
         def __init__(self, qobj: TQObject, prop_name: str):
             self.qobj = qobj
-            # self.prop_name = prop_name or QQmlProperty(self.qobj).name()
             self.prop_name = prop_name
             
-        def __setattr__(self, key: TPropName, value: 'PropDelegatorC.PropBroker'):
-            t_obj = self.qobj
-            t_prop_name = key
-            s_obj = value.qobj
-            s_prop_name = value.prop_name
-            assert s_prop_name is not None
+        def write(self, value: 'PropDelegatorC.QmlSideProp'):
+            t_obj, t_prop_name = self.qobj, self.prop_name
+            s_obj, s_prop_name = value.qobj, value.prop_name
+            
+            if t_prop_name == 'anchors.center_in':
+                s_prop_name = ''
+            elif t_prop_name.startswith('anchors.'):
+                s_prop_name = s_prop_name.removeprefix('anchors.')
+            
             qmlside.bind_prop(t_obj, t_prop_name, s_obj, s_prop_name)
     
-    def __getattr__(self, item) -> Union[Any, tuple[TQObject, TPropName]]:
-        if item == _REGISTERED_NAMES:
-            return super().__getattribute__(_REGISTERED_NAMES)
-        if item in self._self_registered_attribute_names:
-            return super().__getattr__(item)
-        else:  # e.g. <anchors>.top
-            # # return QQmlProperty(self.prop.read(), item)
-            return PropDelegatorC.PropBroker(self.prop.read(), item)
-            # return self.prop.read(), item
+    def __get_subprop__(self, name):
+        # e.g. anchors.top -> QQmlSideProp(<anchors.top>)
+        return PropDelegatorC.QmlSideProp(self.qobj, f'{self.name}.{name}')
     
-    def __setattr__(self, key, value):
-        # if key in dir(self):
-        if key.startswith('__') or key in ('qobj', 'name', 'prop'):
-            super().__setattr__(key, value)
-        else:
-            self.write(value)
+    def __set_subprop__(self, name, value: 'PropDelegatorC.QmlSideProp'):
+        # e.g. anchors.top = xxx.anchors.bottom
+        self.__get_subprop__(name).write(value)
+        # t = self.__get_subprop__(name)
+        # s = value
+        # qmlside.bind_prop(t.qobj, t.prop_name, s.qobj, s.prop_name)
     
-    def write(self, value: tuple[TQObject, TPropName]):
-        qmlside.bind_prop(self.prop.read(), self.name, *value)
-        
-        
+    def write(self, value: 'PropDelegatorC.QmlSideProp'):
+        # e.g. anchors.write(xxx.anchors.top)
+        raise AttributeError('Property not writable: {}'.format(self.name))
+
+
 def adapt_delegator(qobj: TQObject, name: TPropName,
                     constructor: TConstructor) -> TDelegator:
     if type(constructor) is RealUnionType:

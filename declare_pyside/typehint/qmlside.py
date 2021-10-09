@@ -19,11 +19,10 @@ TComponentCache = dict[TQmlFile, TComponent]
 
 
 class TQSideCore:
-    # `./qml/QSide.qml`
+    # `declare_pyside/qmlside/LKQmlSide/QmlSide.qml`
     
     @staticmethod
-    def bind(t_obj: TQObject, t_prop_name: TPropName,
-             s_obj: TQObject, s_prop_name: TPropName): pass
+    def bind(t_obj: TQObject, s_obj: TQObject, expression: str): pass
     
     @staticmethod
     def connect_prop(*_, **__) -> Any: pass

@@ -123,9 +123,11 @@ def _use_relpath(path: str) -> str:
         #   launch_dir = 'c:/program files/workspace/myprj'
         #   -> 'ui/view.qml' (or maybe 'ui\\view.qml')
         return path.replace('\\', '/')
+        # # return path
     
     elif path[1:].startswith(':%5C'):
         return path.replace('%5C', '/')
     
     else:
-        raise ValueError('Unknown path type', path)
+        # raise ValueError('Unknown path type', path)
+        return f'<{path}>'  # e.g. '<eval code>'

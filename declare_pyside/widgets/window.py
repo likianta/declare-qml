@@ -6,7 +6,7 @@ from ..path_model import widgets_dir
 _is_main_window = True
 
 
-class Window(BaseItem, Context, WindowProps):
+class Window(BaseItem, WindowProps):
     
     def __init__(self):
         Context.__init__(self)

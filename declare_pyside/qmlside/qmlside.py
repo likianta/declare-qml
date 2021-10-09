@@ -36,8 +36,12 @@ class QmlSide(QObject):
     def bind_prop(self,
                   t_obj: TQObject, t_prop_name: TPropName,
                   s_obj: TQObject, s_prop_name: TPropName):
-        lk.logt('[D5121]', t_obj, t_prop_name, s_obj, s_prop_name)
-        self._core.bind(t_obj, t_prop_name, s_obj, s_prop_name)
+        expression = '{} = Qt.binding(() => {})'.format(
+            f't_obj.{t_prop_name}',
+            f's_obj.{s_prop_name}'.rstrip('.'),
+        )
+        lk.loga(expression)
+        self._core.bind(t_obj, s_obj, expression)
     
     def connect_prop(self, r: TReceptor, s: TSender):
         pass

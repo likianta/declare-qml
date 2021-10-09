@@ -3,6 +3,7 @@ from PySide6.QtQml import QQmlComponent
 from declare_foundation.context_manager import Context
 from .core.authorized_props import AuthorizedProps
 from .core.authorized_props import QPROPS
+from .core.prop_delegators import PropDelegator
 from .core.prop_delegators import adapt_delegator
 from ..pyside import app
 from ..qmlside import qmlside
@@ -46,7 +47,10 @@ class BaseItem(Context, AuthorizedProps):
             # C
             type_ = self._qprops[key]
             prop_delegator = adapt_delegator(self.qobj, key, type_)
-            prop_delegator.write(value)
+            if isinstance(value, PropDelegator):
+                prop_delegator.write(value.read())
+            else:
+                prop_delegator.write(value)
         else:
             super().__setattr__(key, value)
     
