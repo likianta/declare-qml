@@ -17,6 +17,6 @@ Window {
     Component.onCompleted: {
         console.log('register qmlside object (from MainWindow)')
         pyside.call('__register_qmlside_object', qmlside)
-        pyside.call('build', root)
+        pyside.call('__build', root)
     }
 }

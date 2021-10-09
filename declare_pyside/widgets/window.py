@@ -22,7 +22,3 @@ class Window(BaseItem, WindowProps):
     def __enter__(self):
         Context.__enter__(self)
         return self
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        from ..pyside import app
-        app.start(self.qmlfile)

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QApplication
 
 from ..path_model import qmlside_dir
 from ..path_model import theme_dir
+from ..typehint import TPath
 
 
 class _Application(QApplication):
@@ -112,7 +113,25 @@ class _Application(QApplication):
         self.root.setContextProperty(name, obj)
         self.__pyobj_holder[name] = obj
     
-    def start(self, qmlfile: str):
+    # noinspection PyUnusedLocal
+    def build(self, func):
+        
+        def _build(*_):
+            from ..pyside import pyside
+            from ..widgets import Window
+            
+            def _build(win_root):
+                win.qobj = win_root
+                func(win)
+            
+            with Application():
+                with Window() as win:
+                    pyside.register(_build, '__build')
+                    self.start(win.qmlfile)
+        
+        return _build
+    
+    def start(self, qmlfile: TPath):
         """
         Args:
             qmlfile: Pass a '.qml' file to launch the application.
@@ -164,7 +183,7 @@ class Application:
         # self.start(this.represents.qmlfile)
     
     @staticmethod
-    def start(qmlfile):
+    def start(qmlfile: TPath):
         app.start(qmlfile)
 
 
