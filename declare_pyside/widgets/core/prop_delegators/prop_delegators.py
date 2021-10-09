@@ -15,6 +15,21 @@ _REGISTERED_NAMES = (
 )
 
 
+class PrimitivePropDelegator:
+    qobj: TQObject
+    name: TPropName
+    
+    def __init__(self, qobj, name):
+        self.qobj = qobj
+        self.name = name
+
+    def read(self):
+        return self.qobj.property(self.name)
+    
+    def write(self, value):
+        self.qobj.setProperty(self.name, value)
+
+
 class PropDelegator:
     qobj: TQObject
     name: TPropName
@@ -155,7 +170,10 @@ class PropDelegatorB(PropDelegator):
     
     def __set_subprop__(self, name, value):
         prop = self.__get_subprop__(name)
-        prop.write(value)
+        prop.write(getattr(value, 'qobj', value))
+        
+    def read(self):
+        return self
 
 
 class PropDelegatorC(PropDelegator):
@@ -167,10 +185,15 @@ class PropDelegatorC(PropDelegator):
             
         def write(self, value: 'PropDelegatorC.QmlSideProp'):
             t_obj, t_prop_name = self.qobj, self.prop_name
-            s_obj, s_prop_name = value.qobj, value.prop_name
-            
+            if isinstance(value, PropDelegatorC.QmlSideProp):
+                s_obj, s_prop_name = value.qobj, value.prop_name
+            else:
+                s_obj, s_prop_name = value.qobj, ''
+
             if t_prop_name == 'anchors.center_in':
                 s_prop_name = ''
+            elif t_prop_name == 'anchors.fill':
+                pass
             elif t_prop_name.startswith('anchors.'):
                 s_prop_name = s_prop_name.removeprefix('anchors.')
             
@@ -187,6 +210,9 @@ class PropDelegatorC(PropDelegator):
         # s = value
         # qmlside.bind_prop(t.qobj, t.prop_name, s.qobj, s.prop_name)
     
+    def read(self):
+        return self
+    
     def write(self, value: 'PropDelegatorC.QmlSideProp'):
         # e.g. anchors.write(xxx.anchors.top)
         raise AttributeError('Property not writable: {}'.format(self.name))
@@ -202,6 +228,8 @@ def adapt_delegator(qobj: TQObject, name: TPropName,
         #   implementation code at `..authorized_props.ItemProps`.
     else:
         # noinspection PyTypeChecker
-        assert issubclass(constructor, PropDelegator)
-        delegator = constructor
+        if issubclass(constructor, PropDelegator):
+            delegator = constructor
+        else:
+            delegator = PrimitivePropDelegator
     return delegator(qobj, name)

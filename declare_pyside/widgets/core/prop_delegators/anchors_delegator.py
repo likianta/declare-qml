@@ -1,6 +1,6 @@
-from .prop_delegators import SubprimePropDelegator
+from .prop_delegators import PropDelegatorC
+from ..authorized_props import AnchorsProps
 
 
-class AnchorsDelegator(SubprimePropDelegator):
+class AnchorsDelegator(PropDelegatorC, AnchorsProps):
     pass
-

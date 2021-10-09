@@ -1,3 +1,4 @@
+from .prop_delegators import PrimitivePropDelegator
 from .prop_delegators import PropDelegator
 from .prop_delegators import PropDelegatorA
 from .prop_delegators import PropDelegatorB

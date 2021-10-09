@@ -37,8 +37,8 @@ class QmlSide(QObject):
                   t_obj: TQObject, t_prop_name: TPropName,
                   s_obj: TQObject, s_prop_name: TPropName):
         expression = '{} = Qt.binding(() => {})'.format(
-            f't_obj.{t_prop_name}',
-            f's_obj.{s_prop_name}'.rstrip('.'),
+            f't_obj.{convert_name_case(t_prop_name)}',
+            f's_obj.{convert_name_case(s_prop_name)}'.rstrip('.'),
         )
         lk.loga(expression)
         self._core.bind(t_obj, s_obj, expression)
@@ -91,6 +91,15 @@ class QmlSide(QObject):
         #   /LKQmlSide/QmlSide.qml:<function:create_object>` -- is called,
         #   TComponent will be implicitly translated to `QML:Component` type.
         return qobj
+
+
+def convert_name_case(snake_case: str):
+    if '_' in snake_case:
+        segs = snake_case.split('_')
+        camel_case = segs[0] + ''.join(x.title() for x in segs[1:])
+    else:
+        camel_case = snake_case
+    return camel_case
 
 
 qmlside = QmlSide()

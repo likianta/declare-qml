@@ -88,8 +88,24 @@ def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
 # ------------------------------------------------------------------------------
 # TODO: the following can be generated from blueprint
 
+class AnchorsProps(AuthorizedProps):
+    fill: Union[str, PrimitivePropDelegator]
+    center: Union[str, PrimitivePropDelegator]
+    center_in: Union[str, PrimitivePropDelegator]
+    
+    left: Union[str, PrimitivePropDelegator]
+    right: Union[str, PrimitivePropDelegator]
+    top: Union[str, PrimitivePropDelegator]
+    bottom: Union[str, PrimitivePropDelegator]
+    
+    margins_left: Union[str, PrimitivePropDelegator]
+    margins_right: Union[str, PrimitivePropDelegator]
+    margins_top: Union[str, PrimitivePropDelegator]
+    margins_bottom: Union[str, PrimitivePropDelegator]
+
+
 class ItemProps(AuthorizedProps):
-    anchors: PropDelegatorC
+    anchors: Union[AnchorsProps, PropDelegatorC]
     height: Union[float, PropDelegatorA]
     width: Union[float, PropDelegatorA]
     x: Union[float, PropDelegatorA]
@@ -97,14 +113,21 @@ class ItemProps(AuthorizedProps):
     z: Union[float, PropDelegatorA]
 
 
+# ------------------------------------------------------------------------------
+
 class ButtonProps(ItemProps):
     text: Union[str, PropDelegatorA]
     background: Union[object, PropDelegatorA]
 
 
+class MouseAreaProps(ItemProps):
+    drag: Union[object, PropDelegatorB]
+
+
 class RectangleProps(ItemProps):
     background: Union[QQuickItem, PropDelegatorA]
     border: Union[QObject, PropDelegatorB]
+    color: Union[str, PropDelegatorA]
 
 
 class TextProps(ItemProps):

@@ -3,7 +3,8 @@ from typing import *
 from .common import TFakeModule
 
 if __name__ == '__main__':
-    import declare_pyside.widgets.core.prop_delegators as _delegators
+    from declare_pyside.widgets.core.prop_delegators \
+        import prop_delegators as _delegators
 else:
     _delegators = TFakeModule
 
@@ -11,7 +12,7 @@ else:
 # `declare_pyside/widgets/core/delegators.py`
 
 TPrimitive = Union[None, bool, float, int, str]
-TDelegator = _delegators.PropDelegator
+TDelegator = Union[_delegators.PropDelegator, _delegators.PrimitiveDelegator]
 TConstructor = Union[TPrimitive, TDelegator]
 
 # ------------------------------------------------------------------------------

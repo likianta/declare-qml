@@ -29,7 +29,7 @@ class BaseItem(Context, AuthorizedProps):
     def __getprop__(self, name: TPropName):
         type_ = self._qprops[name]
         prop_delegator = adapt_delegator(self.qobj, name, type_)
-        return prop_delegator
+        return prop_delegator.read()
     
     def __setattr__(self, key, value):
         if key == QPROPS:

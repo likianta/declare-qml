@@ -113,7 +113,6 @@ class _Application(QApplication):
         self.root.setContextProperty(name, obj)
         self.__pyobj_holder[name] = obj
     
-    # noinspection PyUnusedLocal
     def build(self, func):
         
         def _build(*_):

@@ -15,7 +15,7 @@ Window {
     x: 1200; y: 400  // appeared on the desktop left-vcenter.
 
     property int    p_cnt: -1
-    property string p_target: PySide.call('__get_target_to_load')
+    property string p_target: pyside.call('__get_target_to_load')
 
     Loader {
         id: _loader
@@ -28,7 +28,7 @@ Window {
             )
 
             source = ""
-            PySide.call('__clear_component_cache')
+            pyside.call('__clear_component_cache')
             _loader.source = p_target
             //  this will open a new window to show the target. (because the
             //  target usually has a root Window widget itself.)
