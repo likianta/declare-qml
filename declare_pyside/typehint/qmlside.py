@@ -6,8 +6,18 @@ from PySide6.QtQml import QQmlComponent as _QQmlComponent
 from PySide6.QtQml import QQmlProperty as _QQmlProperty
 from PySide6.QtQuick import QQuickItem as _QQuickItem
 
+from .common import TFakeModule
+
+if __name__ == '__main__':
+    from declare_pyside.widgets.base_item import BaseItem as _BaseItem
+else:
+    _BaseItem = TFakeModule
+
+# ------------------------------------------------------------------------------
+
 TComponent = _QQmlComponent
 TQObject = Union[_QObject, _QQuickItem]
+TItem = _BaseItem
 TProperty = _QQmlProperty
 TPropName: TypeAlias = str
 
@@ -34,4 +44,4 @@ class TQSideCore:
     def create_object(component: TComponent, container: TQObject) -> TQObject: pass
     
     @staticmethod
-    def eval_js(code: str, locals_: list[TQObject]): pass
+    def eval_js(code: str, args: list[TQObject]): pass

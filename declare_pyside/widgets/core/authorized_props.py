@@ -3,27 +3,23 @@ from PySide6.QtGui import QFont
 from PySide6.QtQuick import QQuickItem
 
 from .prop_delegators import *
+from ...typehint.qmlside import *
 from ...typehint.widgets_support import *
-
-QPROPS = '_qprops'
 
 
 class AuthorizedProps:
     """
     Notes.zh-CN:
         所有继承本类的子类, 如果该子类属于 Mixin 类型, 则必须将本类放在第一继承
-        位置. 否则将导致 [MARK][1] 发生异常, 进而导致 [MARK][2] 引发断言错误.
+        位置. 否则将导致 [MARK][1] 发生异常.
         
     Notes:
         All subclasses that inherit from this class, if the subclass is a Mixin
         type, it must place AuthorizedProps in its first Mixin position.
-        Otherwise [MARK][1] will match a wrong baseclass, then [MARK][2] will
-        raise an AssertionError.
+        Otherwise [MARK][1] will match a wrong baseclass.
         
         [1]: `<child_class>.<classmethod:get_authorized_props>.<while_loop>
-             .<var:temp_cls>.<code:'temp_cls = temp_cls.__base__'>`
-        [2]: `<child_class>.<classmethod:get_authorized_props>.<while_loop>
-             .<code:assert>`
+             .<var:tmp_cls>.<code:'tmp_cls = tmp_cls.__base__'>`
     """
     # this is a special attribute that its name must be prefixed with
     # underscore. otherwise it will puzzle `<globals>._get_authorized_props
@@ -44,8 +40,8 @@ class AuthorizedProps:
                             '`AuthorizedProps`!')
         # trick: search `self.__class__.__bases__` by reversed sequence. this
         #   can be a little faster to find the target baseclass because usually
-        #   we like putting `class:AuthorizedProps` in the end of `self
-        #   .__class__.__bases__`.
+        #   we like putting `AuthorizedProps` or its subclasses in the end of
+        #   mixin list.
         for cls in reversed(self.__class__.__bases__):
             # lk.logt('[D5835]', cls.__name__)
             if issubclass(cls, AuthorizedProps):
@@ -56,27 +52,10 @@ class AuthorizedProps:
     def _get_authorized_props(cls) -> TAuthProps:
         out = {}
         tmp_cls = cls
-        # # while tmp_cls is not AuthorizedProps:
-        # #     assert issubclass(tmp_cls, AuthorizedProps)
-        while issubclass(tmp_cls, AuthorizedProps):  # two steps in one
+        while issubclass(tmp_cls, AuthorizedProps):
             out.update(_get_authorized_props(tmp_cls))
             tmp_cls = tmp_cls.__base__
         return out
-    
-    def __getattr__(self, item):
-        if item == QPROPS:
-            return getattr(super(), QPROPS, ())
-        
-        # https://stackoverflow.com/questions/3278077/difference-between-getattr
-        # -vs-getattribute
-        if item in self._qprops:
-            return super().__getattribute__('__getprop__')(item)
-        else:
-            return super().__getattribute__(item)
-    
-    def __getprop__(self, name):
-        # see typical implementation at `..base_item.BaseItem.__getprop__`.
-        raise NotImplemented
 
 
 def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
@@ -88,7 +67,7 @@ def _get_authorized_props(cls) -> Iterable[tuple[TPropName, TConstructor]]:
 # ------------------------------------------------------------------------------
 # TODO: the following can be generated from blueprint
 
-class AnchorsProps(AuthorizedProps):
+class AnchorsGroup(AuthorizedProps):
     fill: Union[str, PrimitivePropDelegator]
     center: Union[str, PrimitivePropDelegator]
     center_in: Union[str, PrimitivePropDelegator]
@@ -104,9 +83,15 @@ class AnchorsProps(AuthorizedProps):
     margins_bottom: Union[str, PrimitivePropDelegator]
 
 
+class DragGroup(AuthorizedProps):
+    active: Union[bool, PrimitivePropDelegator]
+    target: Union[TQObject, TItem, PropDelegatorA]
+
+
 class ItemProps(AuthorizedProps):
-    anchors: Union[AnchorsProps, PropDelegatorC]
+    anchors: Union[AnchorsGroup, AnchorsDelegator]
     height: Union[float, PropDelegatorA]
+    object_name: Union[str, PropDelegatorA]
     width: Union[float, PropDelegatorA]
     x: Union[float, PropDelegatorA]
     y: Union[float, PropDelegatorA]
@@ -121,7 +106,7 @@ class ButtonProps(ItemProps):
 
 
 class MouseAreaProps(ItemProps):
-    drag: Union[object, PropDelegatorB]
+    drag: Union[DragGroup, DragDelegator]
 
 
 class RectangleProps(ItemProps):

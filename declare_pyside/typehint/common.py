@@ -12,6 +12,8 @@ TFakeModule = _lambdex('', """
     class FakeModule:
         def __getattr__(self, item):
             return None
+        def __call__(self, *args, **kwargs):
+            return None
     return FakeModule()
 """)()
 

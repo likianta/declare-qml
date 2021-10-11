@@ -9,6 +9,7 @@ from PySide6.QtQml import QQmlProperty
 
 from .typehint import *
 from ....qmlside import qmlside
+from ....qmlside.qmlside import convert_name_case
 
 _REGISTERED_NAMES = (
     'qobj', 'name', 'prop', 'read', 'write', 'kiss', 'bind'
@@ -19,15 +20,15 @@ class PrimitivePropDelegator:
     qobj: TQObject
     name: TPropName
     
-    def __init__(self, qobj, name):
+    def __init__(self, qobj: TQObject, name: TPropName):
         self.qobj = qobj
         self.name = name
-
+    
     def read(self):
-        return self.qobj.property(self.name)
+        return self.qobj.property(convert_name_case(self.name))
     
     def write(self, value):
-        self.qobj.setProperty(self.name, value)
+        self.qobj.setProperty(convert_name_case(self.name), value)
 
 
 class PropDelegator:
@@ -38,14 +39,13 @@ class PropDelegator:
     def __init__(self, qobj: TQObject, name: TPropName):
         self.qobj = qobj
         self.name = name
-        self.prop = QQmlProperty(qobj, name)
+        self.prop = QQmlProperty(qobj, convert_name_case(name))
     
     def __getattr__(self, item):
-        # notice: subclasses shouldn't override this method.
-        if item.startswith('__') or item in _REGISTERED_NAMES:
+        if item in _REGISTERED_NAMES or item.startswith('_'):
             return super().__getattribute__(item)
         else:
-            return super().__getattribute__('__get_subprop__')(item)
+            return self.__get_subprop__(item)
     
     def __setattr__(self, key, value):
         """
@@ -53,7 +53,7 @@ class PropDelegator:
             xxx.name = 'xxx'
             xxx.width = 12
         """
-        if key.startswith('__') or key in _REGISTERED_NAMES:
+        if key in _REGISTERED_NAMES or key.startswith('_'):
             super().__setattr__(key, value)
         else:
             self.__set_subprop__(key, value)
@@ -144,7 +144,7 @@ class PropDelegator:
 class PropDelegatorA(PropDelegator):
     
     def __get_subprop__(self, name):
-        # e.g. width.color -> error
+        # e.g. xxx.width.color -> error
         raise AttributeError(
             'Illegal property: {}.{}!'.format(self.name, name),
             'This property ({}) doesn\'t support accessing secondary property '
@@ -153,7 +153,7 @@ class PropDelegatorA(PropDelegator):
         )
     
     def __set_subprop__(self, name, value):
-        # e.g. width.color = '#FFFFFF'
+        # e.g. xxx.width.color = '#FFFFFF'
         raise AttributeError(
             'Illegal property: {}.{}!'.format(self.name, name),
             'This property ({}) doesn\'t support setting a secondary property '
@@ -166,44 +166,31 @@ class PropDelegatorB(PropDelegator):
     
     def __get_subprop__(self, name) -> PropDelegatorA:
         # e.g. border.width -> PropDelegator(<border.width>)
+        #             ^^^^^
+        #             name
         return PropDelegatorA(self.prop.read(), name)
     
     def __set_subprop__(self, name, value):
+        # e.g. border.width = 12
+        #             ^^^^^   ^^
+        #             name    value
         prop = self.__get_subprop__(name)
-        prop.write(getattr(value, 'qobj', value))
-        
+        if isinstance(value, PropDelegator):
+            prop.write(value.read())
+        else:
+            prop.write(getattr(value, 'qobj', value))
+    
     def read(self):
         return self
 
 
 class PropDelegatorC(PropDelegator):
-    class QmlSideProp:
-        
-        def __init__(self, qobj: TQObject, prop_name: str):
-            self.qobj = qobj
-            self.prop_name = prop_name
-            
-        def write(self, value: 'PropDelegatorC.QmlSideProp'):
-            t_obj, t_prop_name = self.qobj, self.prop_name
-            if isinstance(value, PropDelegatorC.QmlSideProp):
-                s_obj, s_prop_name = value.qobj, value.prop_name
-            else:
-                s_obj, s_prop_name = value.qobj, ''
-
-            if t_prop_name == 'anchors.center_in':
-                s_prop_name = ''
-            elif t_prop_name == 'anchors.fill':
-                pass
-            elif t_prop_name.startswith('anchors.'):
-                s_prop_name = s_prop_name.removeprefix('anchors.')
-            
-            qmlside.bind_prop(t_obj, t_prop_name, s_obj, s_prop_name)
     
     def __get_subprop__(self, name):
         # e.g. anchors.top -> QQmlSideProp(<anchors.top>)
-        return PropDelegatorC.QmlSideProp(self.qobj, f'{self.name}.{name}')
+        return QmlSideProp(self.qobj, f'{self.name}.{name}')
     
-    def __set_subprop__(self, name, value: 'PropDelegatorC.QmlSideProp'):
+    def __set_subprop__(self, name, value: 'QmlSideProp'):
         # e.g. anchors.top = xxx.anchors.bottom
         self.__get_subprop__(name).write(value)
         # t = self.__get_subprop__(name)
@@ -213,23 +200,50 @@ class PropDelegatorC(PropDelegator):
     def read(self):
         return self
     
-    def write(self, value: 'PropDelegatorC.QmlSideProp'):
+    def write(self, value: 'QmlSideProp'):
         # e.g. anchors.write(xxx.anchors.top)
         raise AttributeError('Property not writable: {}'.format(self.name))
+
+
+class QmlSideProp:
+    
+    def __init__(self, qobj: TQObject, prop_name: str, **kwargs):
+        self.qobj = qobj
+        self.prop_name = prop_name
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+    
+    def write(self, value: 'QmlSideProp'):
+        t_obj, t_prop_name = self.qobj, self.prop_name
+        if isinstance(value, QmlSideProp):
+            s_obj, s_prop_name = value.qobj, value.prop_name
+        else:
+            s_obj, s_prop_name = value.qobj, ''
+        
+        if t_prop_name == 'anchors.center_in':
+            s_prop_name = ''
+        elif t_prop_name == 'anchors.fill':
+            pass
+        elif t_prop_name.startswith('anchors.'):
+            s_prop_name = s_prop_name.removeprefix('anchors.')
+        
+        qmlside.bind_prop(t_obj, t_prop_name, s_obj, s_prop_name)
 
 
 def adapt_delegator(qobj: TQObject, name: TPropName,
                     constructor: TConstructor) -> TDelegator:
     if type(constructor) is RealUnionType:
-        delegator = constructor.__args__[-1]
-        #   e.g. Union[float, PropDelegatorA] -> PropDelegatorA
-        #   we had agreement that always put `type:TDelegator` in the last
+        # e.g. Union[float, PropDelegatorA]
+        delegator = constructor.__args__[-1]  # -> PropDelegatorA
+        #   we had an agreement that always put `type:TDelegator` in the last
         #   position of `TConstructor`. see reason at [TODO] and some
         #   implementation code at `..authorized_props.ItemProps`.
     else:
         # noinspection PyTypeChecker
         if issubclass(constructor, PropDelegator):
+            # e.g. constructor is PropDelegatorA
             delegator = constructor
         else:
+            # e.g. constructor is float
             delegator = PrimitivePropDelegator
     return delegator(qobj, name)

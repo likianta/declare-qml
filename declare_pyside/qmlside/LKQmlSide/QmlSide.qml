@@ -27,6 +27,7 @@ Item {
     }
 
     function eval_js(code, args) {
+        console.log(code, args)
         eval(code)
     }
 

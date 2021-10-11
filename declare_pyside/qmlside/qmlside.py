@@ -30,6 +30,9 @@ class QmlSide(QObject):
     def init_core(self, qobj):
         self._core = qobj
     
+    def kiss(self, exp, left, right):
+        self._core.eval_js(exp.format('args[0]', 'args[1]'), [left, right])
+    
     def bind(self, target, participants, expression):
         pass
     
@@ -94,11 +97,11 @@ class QmlSide(QObject):
 
 
 def convert_name_case(snake_case: str):
-    if '_' in snake_case:
-        segs = snake_case.split('_')
-        camel_case = segs[0] + ''.join(x.title() for x in segs[1:])
-    else:
+    if '_' not in snake_case:
         camel_case = snake_case
+    else:
+        segs = snake_case.split('_')
+        camel_case = segs[0] + '.'.join(x.title() for x in segs[1:])
     return camel_case
 
 

@@ -4,7 +4,7 @@ from .common import TFakeModule
 
 if __name__ == '__main__':
     from declare_pyside.widgets.core.prop_delegators \
-        import prop_delegators as _delegators
+        import base_delegators as _delegators
 else:
     _delegators = TFakeModule
 
