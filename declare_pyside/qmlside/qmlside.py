@@ -43,7 +43,7 @@ class QmlSide(QObject):
             f't_obj.{convert_name_case(t_prop_name)}',
             f's_obj.{convert_name_case(s_prop_name)}'.rstrip('.'),
         )
-        lk.loga(expression)
+        lk.loga(expression, h='parent')
         self._core.bind(t_obj, s_obj, expression)
     
     def connect_prop(self, r: TReceptor, s: TSender):
@@ -94,15 +94,47 @@ class QmlSide(QObject):
         #   /LKQmlSide/QmlSide.qml:<function:create_object>` -- is called,
         #   TComponent will be implicitly translated to `QML:Component` type.
         return qobj
+    
+    def eval_js(self, code, *args):
+        lk.loga(code, len(args), h='parent')
+        return self._core.eval_js(
+            code.format(*(f'args[{i}]' for i in range(len(args)))), list(args)
+        )
 
 
 def convert_name_case(snake_case: str):
+    if '.' in snake_case:
+        return '.'.join(convert_name_case(s) for s in snake_case.split('.'))
+    
     if '_' not in snake_case:
         camel_case = snake_case
+    
     else:
         segs = snake_case.split('_')
         camel_case = segs[0] + '.'.join(x.title() for x in segs[1:])
+    
     return camel_case
+
+
+def convert_primitive_type(value):
+    if isinstance(value, str):
+        return f'"{value}"'
+    elif isinstance(value, bool):
+        return 'true' if value else 'false'
+    elif value is None:
+        return 'null'
+    else:
+        return str(value)
+    
+    # match value:
+    #     case type(x) is str:
+    #         return f'"{value}"'
+    #     case bool:
+    #         return 'true' if value else 'false'
+    #     case None:
+    #         return 'null'
+    #     case _:
+    #         return str(value)
 
 
 qmlside = QmlSide()

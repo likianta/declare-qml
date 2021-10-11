@@ -10,6 +10,7 @@ from PySide6.QtQml import QQmlProperty
 from .typehint import *
 from ....qmlside import qmlside
 from ....qmlside.qmlside import convert_name_case
+from ....qmlside.qmlside import convert_primitive_type
 
 _REGISTERED_NAMES = (
     'qobj', 'name', 'prop', 'read', 'write', 'kiss', 'bind'
@@ -212,13 +213,20 @@ class QmlSideProp:
         self.prop_name = prop_name
         for k, v in kwargs.items():
             setattr(self, k, v)
+            
+    def read(self):
+        return qmlside.eval_js('{{0}}.{}'.format(
+            convert_name_case(self.prop_name)
+        ), self.qobj)
     
     def write(self, value: 'QmlSideProp'):
         t_obj, t_prop_name = self.qobj, self.prop_name
         if isinstance(value, QmlSideProp):
             s_obj, s_prop_name = value.qobj, value.prop_name
-        else:
+        elif hasattr(value, 'qobj'):
             s_obj, s_prop_name = value.qobj, ''
+        else:
+            s_obj, s_prop_name = convert_primitive_type(value), ''
         
         if t_prop_name == 'anchors.center_in':
             s_prop_name = ''
@@ -228,6 +236,12 @@ class QmlSideProp:
             s_prop_name = s_prop_name.removeprefix('anchors.')
         
         qmlside.bind_prop(t_obj, t_prop_name, s_obj, s_prop_name)
+        
+    def __add__(self, other):
+        return self.read() + other
+    
+    def __radd__(self, other):
+        return other + self.read()
 
 
 def adapt_delegator(qobj: TQObject, name: TPropName,

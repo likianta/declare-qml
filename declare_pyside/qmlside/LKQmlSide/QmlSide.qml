@@ -5,8 +5,6 @@ Item {
     objectName: 'QmlSide'
 
     function bind(t_obj, s_obj, expression) {
-        console.log(t_obj, s_obj)
-        console.log(expression)
         eval(expression)
     }
 
@@ -27,8 +25,7 @@ Item {
     }
 
     function eval_js(code, args) {
-        console.log(code, args)
-        eval(code)
+        return eval(code)
     }
 
     // Component.onCompleted: {

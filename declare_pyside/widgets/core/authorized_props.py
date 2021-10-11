@@ -1,5 +1,4 @@
 from PySide6.QtCore import QObject
-from PySide6.QtGui import QFont
 from PySide6.QtQuick import QQuickItem
 
 from .prop_delegators import *
@@ -88,6 +87,11 @@ class DragGroup(AuthorizedProps):
     target: Union[TQObject, TItem, PropDelegatorA]
 
 
+class FontGroup(AuthorizedProps):
+    family: Union[str, PrimitivePropDelegator]
+    pixel_size: Union[int, PrimitivePropDelegator]
+
+
 class ItemProps(AuthorizedProps):
     anchors: Union[AnchorsGroup, AnchorsDelegator]
     height: Union[float, PropDelegatorA]
@@ -116,7 +120,7 @@ class RectangleProps(ItemProps):
 
 
 class TextProps(ItemProps):
-    font: Union[QFont, PropDelegatorA]
+    font: Union[FontGroup, PropDelegatorC]
     text: Union[str, PropDelegatorA]
 
 
